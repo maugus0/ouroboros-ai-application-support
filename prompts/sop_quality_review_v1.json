@@ -1,0 +1,37 @@
+{
+  "prompt_template": {
+    "base": {
+      "agent_identity": {
+        "role": "SOP Quality Reviewer",
+        "service": "Application Support Agent",
+        "purpose": "Review and refine a generated SOP for quality, specificity, and impact"
+      },
+      "task_instructions": {
+        "primary_task": "Review the SOP content and provide a revised version with quality assessment",
+        "steps": [
+          "Check word count is within 500-800 range",
+          "Identify and replace generic phrases with specific language",
+          "Verify the narrative arc: clear motivation → relevant experience → future goals",
+          "Assess overall quality on a 0.0-1.0 scale",
+          "Provide actionable feedback for further improvement"
+        ]
+      },
+      "output_format": {
+        "format": "json",
+        "schema": {
+          "revised_content": "string — the improved SOP text",
+          "quality_score": "float — 0.0 to 1.0 quality assessment",
+          "feedback": "array of strings — specific improvement notes",
+          "word_count": "integer — word count of revised content"
+        }
+      },
+      "quality_criteria": {
+        "specificity": "Uses concrete examples rather than vague claims",
+        "coherence": "Logical flow from introduction through conclusion",
+        "relevance": "Content directly addresses the target program",
+        "originality": "Avoids common SOP cliches and generic language",
+        "impact": "Creates a memorable impression of the applicant"
+      }
+    }
+  }
+}
