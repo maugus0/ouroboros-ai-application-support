@@ -1,5 +1,6 @@
 """Application checklist CRUD repository."""
 
+import json
 from typing import Any
 
 from app.core.logging import get_logger
@@ -20,11 +21,15 @@ class ChecklistRepository(MySQLBaseRepository):
             (id, user_id, program_id, items, overall_status, completion_percentage)
             VALUES (%s, %s, %s, %s, %s, %s)
         """
+        items_val = checklist_data["items"]
+        if isinstance(items_val, (dict, list)):
+            items_val = json.dumps(items_val, ensure_ascii=False, default=str)
+
         params = (
             checklist_data["id"],
             checklist_data["user_id"],
             checklist_data.get("program_id"),
-            checklist_data["items"],
+            items_val,
             checklist_data.get("overall_status", "not_started"),
             checklist_data.get("completion_percentage", 0.0),
         )

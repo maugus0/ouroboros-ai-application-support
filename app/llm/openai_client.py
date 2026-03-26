@@ -16,7 +16,7 @@ def get_openai_client():
     """Lazy-initialise and return the OpenAI client."""
     global _client  # pylint: disable=global-statement
     if _client is None:
-        from openai import AsyncOpenAI
+        from openai import AsyncOpenAI  # pylint: disable=import-outside-toplevel
 
         _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     return _client

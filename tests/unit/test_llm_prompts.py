@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from app.llm.prompts import (
     get_cover_letter_prompt,
     get_cv_improvement_prompt,
@@ -47,7 +49,5 @@ def test_cv_improvement_prompt():
 
 
 def test_invalid_format_raises():
-    import pytest
-
     with pytest.raises(ValueError, match="Unsupported prompt format"):
         get_sop_outline_prompt(fmt="xml")

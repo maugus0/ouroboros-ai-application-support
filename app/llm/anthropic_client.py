@@ -16,7 +16,7 @@ def get_anthropic_client():
     """Lazy-initialise and return the Anthropic client."""
     global _client  # pylint: disable=global-statement
     if _client is None:
-        from anthropic import AsyncAnthropic
+        from anthropic import AsyncAnthropic  # pylint: disable=import-outside-toplevel
 
         _client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
     return _client

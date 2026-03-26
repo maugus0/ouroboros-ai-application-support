@@ -35,13 +35,13 @@ def test_validate_generic_phrases():
         "I am passionate about computer science. From a young age I knew this was my dream university. "
         "Throughout my academic journey I have been committed. " + " ".join(["word"] * 550)
     )
-    is_valid, issues = validate_sop(content)
+    _is_valid, issues = validate_sop(content)
     assert any("generic" in i.lower() for i in issues)
 
 
 def test_validate_prompt_leakage():
     content = "As an AI, I cannot complete this request. " + " ".join(["word"] * 550)
-    is_valid, issues = validate_sop(content)
+    _is_valid, issues = validate_sop(content)
     assert any("leakage" in i.lower() for i in issues)
 
 

@@ -15,6 +15,9 @@ Microservice for the **Ouroboros AI** scholarship discovery platform. The Applic
 - [Database Schema](#database-schema)
 - [API Endpoints](#api-endpoints)
 - [Prompt System](#prompt-system)
+- [LLM Integration](#llm-integration)
+- [Prompt Engineering](#prompt-engineering)
+- [Version Control](#version-control)
 - [Security](#security)
 - [Development Workflow](#development-workflow)
 - [Testing](#testing)
@@ -67,6 +70,7 @@ The Application Support Agent is a critical microservice in the Ouroboros AI pla
 │  │  POST /sop/generate                         │     │
 │  │  GET  /sop/{id}                             │     │
 │  │  POST /cover-letters/generate               │     │
+│  │  POST /checklists                           │     │
 │  │  GET  /checklists/{user_id}                 │     │
 │  │  POST /deadlines                            │     │
 │  └─────────────────────┬───────────────────────┘     │
@@ -95,6 +99,7 @@ The Application Support Agent is a critical microservice in the Ouroboros AI pla
 │  │  ChecklistRepository                        │     │
 │  │  DeadlineRepository                         │     │
 │  │  RetrievalRepository                        │     │
+│  │  LLMCallLogRepository                       │     │
 │  └─────────────────────────────────────────────┘     │
 └──────────────┬───────────────────────────────────────┘
                │
@@ -114,6 +119,7 @@ The Application Support Agent is a critical microservice in the Ouroboros AI pla
 - **Step 1: Outline** — Generate structured SOP outline from student profile
 - **Step 2: Expansion** — Expand outline into full 500-800 word prose
 - **Step 3: Quality Review** — LLM-assisted quality scoring and refinement
+- **Example output** — With real keys and data, the pipeline produces a structured outline (JSON), a 500–800 word draft, then a revised draft with `quality_score` and feedback strings stored on the row.
 - **Version control** — Track iterations with parent_sop_id chain
 - **Retrieval-assisted** — Reference 1-2 example SOPs for style guidance
 
@@ -270,9 +276,14 @@ Swagger docs are available at `http://localhost:8005/docs`.
 | `ENABLE_PROMPT_INJECTION_DETECTION` | No | `true` | Enable injection detection |
 | `ENABLE_OUTPUT_VALIDATION` | No | `true` | Enable output validation |
 | **Application** ||||
+| `ENVIRONMENT` | No | `development` | `development` (console logs) or `production` (JSON logs) |
 | `LOG_LEVEL` | No | `INFO` | `DEBUG\|INFO\|WARNING\|ERROR\|CRITICAL` |
-| `USE_MOCK_DATA` | No | `false` | Use in-memory repos (tests only) |
-| `ALLOW_DB_FAILURE` | No | `false` | Continue if DB unavailable (tests only) |
+| `USE_MOCK_DATA` | No | `false` | Skip real LLM calls; return canned SOP/cover letter (tests / local) |
+| `ALLOW_DB_FAILURE` | No | `false` | Skip DB pool startup; API reads/writes that need MySQL will error (tests / CI) |
+| **File uploads** ||||
+| `MAX_FILE_SIZE_MB` | No | `10` | Max upload size for future DOCX flows |
+| `ALLOWED_EXTENSIONS` | No | `.pdf,.docx,...` | Allowed extensions (see `app/utils/file_utils.py`) |
+| `TEMP_UPLOAD_DIR` | No | `/tmp/uploads` | Temp directory for uploads |
 
 ### Docker / CI Prefix Compatibility
 
@@ -341,6 +352,7 @@ All endpoints (except health) require the `X-Service-Token` header.
 
 | Method | Path | Description |
 |--------|------|-------------|
+| POST | `/checklists` | Create checklist with items |
 | GET | `/checklists/{user_id}` | Get all checklists for user |
 | PUT | `/checklists/{id}/items/{item_id}` | Update checklist item |
 
@@ -348,9 +360,102 @@ All endpoints (except health) require the `X-Service-Token` header.
 
 | Method | Path | Description |
 |--------|------|-------------|
+| POST | `/deadlines` | Create deadline entry |
 | GET | `/deadlines/{user_id}` | Get all deadlines for user |
-| POST | `/deadlines/` | Create deadline entry |
 | PUT | `/deadlines/{id}` | Update deadline entry |
+
+### Example `curl` calls
+
+Replace `YOUR_TOKEN` with the same value as `X_SERVICE_TOKEN` in `.env`.
+
+**Generate SOP (or mock SOP when `USE_MOCK_DATA=true`):**
+
+```bash
+curl -s -X POST http://localhost:8005/sop/generate \
+  -H "X-Service-Token: YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user-123",
+    "program_id": "prog-456",
+    "user_profile": {"full_name": "Jane Doe"},
+    "target_program": {"field_of_study": "Computer Science"},
+    "user_preferences": {}
+  }'
+```
+
+**Get SOP by id:**
+
+```bash
+curl -s http://localhost:8005/sop/SOP_UUID \
+  -H "X-Service-Token: YOUR_TOKEN"
+```
+
+**List SOP version chain:**
+
+```bash
+curl -s http://localhost:8005/sop/versions/SOP_UUID \
+  -H "X-Service-Token: YOUR_TOKEN"
+```
+
+**Generate cover letter:**
+
+```bash
+curl -s -X POST http://localhost:8005/cover-letters/generate \
+  -H "X-Service-Token: YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user-123",
+    "target_type": "program",
+    "target_id": "prog-456",
+    "user_profile": {"full_name": "Jane Doe"},
+    "target_details": {"program_name": "MS CS"}
+  }'
+```
+
+**Create checklist:**
+
+```bash
+curl -s -X POST http://localhost:8005/checklists \
+  -H "X-Service-Token: YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user-123",
+    "program_id": "prog-456",
+    "items": [
+      {"description": "Submit transcripts", "status": "pending"},
+      {"description": "Request recommendations", "status": "pending"}
+    ]
+  }'
+```
+
+**Update checklist item:**
+
+```bash
+curl -s -X PUT http://localhost:8005/checklists/CHECKLIST_UUID/items/ITEM_UUID \
+  -H "X-Service-Token: YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "completed"}'
+```
+
+**Create deadline:**
+
+```bash
+curl -s -X POST http://localhost:8005/deadlines \
+  -H "X-Service-Token: YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user-123",
+    "deadline_date": "2026-12-01",
+    "item_description": "Application due"
+  }'
+```
+
+**List deadlines for user:**
+
+```bash
+curl -s http://localhost:8005/deadlines/user-123 \
+  -H "X-Service-Token: YOUR_TOKEN"
+```
 
 ---
 
@@ -376,6 +481,48 @@ The `app/utils/prompt_utils.py` module provides:
 - `merge_runtime_context(template, context)` — inject runtime data
 - `build_prompt_json(filename, context)` — full pipeline, returns JSON string
 - `build_prompt_text(filename, context)` — full pipeline, returns formatted text
+
+---
+
+## LLM Integration
+
+Calls flow through `LLMPipelineService` (`app/services/llm_pipeline_service.py`):
+
+1. **Primary** — `call_openai` (`app/llm/openai_client.py`) with optional `response_format=json` for structured steps.
+2. **Fallback** — On any OpenAI failure, `call_anthropic` (`app/llm/anthropic_client.py`) runs with an appended “JSON only” instruction when JSON output is required.
+3. **Retries** — Both clients use `tenacity` (3 attempts, exponential backoff).
+4. **Audit** — Each attempt can be written to `llm_call_logs` via `LLMCallLogRepository` when the DB pool is active (`ALLOW_DB_FAILURE=false`).
+
+The production SOP flow uses **three sequential** `generate()` calls (outline → expand → review). `app/llm/pipeline/sop_pipeline.py` remains the place to introduce a LangGraph `StateGraph` if you want explicit graph semantics later.
+
+```mermaid
+flowchart LR
+  A[API / Service] --> B[LLMPipelineService.generate]
+  B --> C{OpenAI}
+  C -->|success| D[Parse text or JSON]
+  C -->|error| E{Anthropic}
+  E -->|success| D
+  E -->|error| F[LLMGenerationError 502]
+  D --> G[(llm_call_logs optional)]
+```
+
+---
+
+## Prompt Engineering
+
+To add or version a new prompt:
+
+1. Add a JSON file under `prompts/` following the existing `prompt_template.base` shape.
+2. Expose a builder in `app/llm/prompts.py` (mirror `get_sop_outline_prompt`).
+3. Inject runtime fields only through the `context` dict so templates stay static on disk.
+4. For user-supplied text, always wrap with `app/security/prompt_guardrails.py` so profile data stays in a DATA section.
+
+---
+
+## Version Control
+
+- **SOPs** — `generated_sops.version` increments when `parent_sop_id` points at a prior row. `GET /sop/versions/{id}` walks ancestors (via `parent_sop_id`) and descendants (children chains) to return the full version set for that lineage.
+- **Cover letters** — Same pattern on `generated_cover_letters` with `parent_letter_id`.
 
 ---
 
@@ -452,16 +599,23 @@ tests/
 │   ├── test_input_sanitizer.py     # Input sanitization + injection detection
 │   ├── test_output_validator.py    # Output validation + quality scoring
 │   ├── test_prompt_utils.py        # Prompt template loading & context merge
-│   └── test_llm_prompts.py         # Prompt generation (JSON + text formats)
+│   ├── test_llm_prompts.py         # Prompt generation (JSON + text formats)
+│   ├── test_llm_pipeline_service.py # OpenAI → Anthropic fallback
+│   ├── test_sop_service.py         # SOP orchestration (mock / LLM-mock)
+│   ├── test_checklist_service.py   # Completion percentage rules
+│   ├── test_deadline_service.py    # Deadline service + mocked repo
+│   ├── test_retrieval_service.py   # Retrieval on/off and repo delegation
+│   ├── test_db_rows.py             # Row → response helpers
+│   └── test_file_utils.py          # Extension / MIME helpers
 └── integration/
-    └── (future E2E tests)
+    └── test_sop_generation_flow.py # HTTP SOP generate + GET edge cases
 ```
 
 ---
 
 ## CI/CD Pipeline
 
-**Workflow**: `.github/workflows/deploy.yml`
+**Workflow**: `.github/workflows/deploy.yml` (GitHub Actions name: **OuroborosAI Application Support CI/CD Pipeline**)
 
 **Trigger**: Pull requests to `main` or `develop`
 
@@ -546,7 +700,8 @@ ouroboros-ai-application-support/
 │   │   ├── mysql_cover_letter_repo.py
 │   │   ├── mysql_checklist_repo.py
 │   │   ├── mysql_deadline_repo.py
-│   │   └── mysql_retrieval_repo.py  # SOP reference retrieval
+│   │   ├── mysql_retrieval_repo.py  # SOP reference retrieval
+│   │   └── mysql_llm_call_log_repo.py
 │   ├── security/                    # Security validation (CRITICAL)
 │   │   ├── input_sanitizer.py       # Input sanitization + injection detection
 │   │   ├── prompt_guardrails.py     # DATA/INSTRUCTION boundary enforcement
@@ -564,6 +719,8 @@ ouroboros-ai-application-support/
 │   │   ├── helpers.py               # generate_uuid, timestamps
 │   │   ├── timezone.py              # UTC helpers
 │   │   ├── prompt_utils.py          # JSON template loading & context merge
+│   │   ├── file_utils.py            # Upload extension / MIME helpers
+│   │   ├── db_rows.py               # MySQL row → Pydantic-friendly dicts
 │   │   └── docx_generator.py        # python-docx wrapper
 │   ├── config.py                    # Pydantic settings
 │   └── main.py                      # FastAPI app with lifespan
@@ -598,6 +755,18 @@ ouroboros-ai-application-support/
 ---
 
 ## Troubleshooting
+
+### LLM Generation Failed
+
+**Symptom**: HTTP 502 with `LLM generation failed` / logs show both providers exhausted.
+
+```bash
+grep -E 'OPENAI_API_KEY|ANTHROPIC_API_KEY' .env
+```
+
+- Ensure at least one provider key is set for real generation (`USE_MOCK_DATA=false`).
+- For local smoke tests without keys, set `USE_MOCK_DATA=true` to exercise the API without outbound LLM calls.
+- JSON steps (outline, quality review, cover letter) require parseable model output; if Anthropic returns prose, check prompts and temperature.
 
 ### Database Connection Failed
 

@@ -3,13 +3,13 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ChecklistItem(BaseModel):
     """A single item within an application checklist."""
 
-    id: str
+    id: str | None = None
     description: str
     status: Literal["pending", "in_progress", "completed"] = "pending"
     category: str = "general"
@@ -33,3 +33,11 @@ class ChecklistItemUpdate(BaseModel):
     """Request body for updating a single checklist item."""
 
     status: Literal["pending", "in_progress", "completed"]
+
+
+class ChecklistCreateRequest(BaseModel):
+    """Request body for creating a checklist."""
+
+    user_id: str
+    program_id: str | None = None
+    items: list[ChecklistItem] = Field(default_factory=list)

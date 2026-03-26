@@ -1,5 +1,7 @@
 """Tests for application configuration."""
 
+# pylint: disable=import-outside-toplevel
+
 import os
 
 
@@ -42,3 +44,12 @@ def test_security_settings():
     assert settings.MAX_INPUT_LENGTH > 0
     assert isinstance(settings.ENABLE_PROMPT_INJECTION_DETECTION, bool)
     assert isinstance(settings.ENABLE_OUTPUT_VALIDATION, bool)
+
+
+def test_allowed_extensions_list():
+    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
+    from app.config import settings
+
+    exts = settings.get_allowed_extensions_list()
+    assert ".pdf" in exts
+    assert ".docx" in exts
