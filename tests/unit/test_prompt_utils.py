@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from app.utils.prompt_utils import build_prompt_json, build_prompt_text, load_prompt_template, merge_runtime_context
 
 
@@ -12,8 +14,6 @@ def test_load_sop_outline_template():
 
 
 def test_load_nonexistent_template():
-    import pytest
-
     with pytest.raises(FileNotFoundError):
         load_prompt_template("nonexistent.json")
 

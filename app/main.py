@@ -20,7 +20,7 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(_application: FastAPI):
     """Application startup and shutdown lifecycle."""
-    setup_logging(log_level=settings.LOG_LEVEL)
+    setup_logging(log_level=settings.LOG_LEVEL, environment=settings.ENVIRONMENT)
     logger = get_logger("startup")
 
     logger.info("application_support_agent_starting", version=APP_VERSION)

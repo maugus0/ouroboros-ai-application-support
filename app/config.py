@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     DOCX_TEMPLATE_DIR: str = "templates/docx"
     OUTPUT_DIR: str = "/tmp/outputs"
 
+    # ========== File uploads (DOCX export / future uploads) ==========
+    MAX_FILE_SIZE_MB: int = 10
+    ALLOWED_EXTENSIONS: str = ".pdf,.docx,.doc,.jpg,.jpeg,.png"
+    TEMP_UPLOAD_DIR: str = "/tmp/uploads"
+
     # ========== Retrieval (Style Reference) ==========
     RETRIEVAL_TOP_K: int = 2
     RETRIEVAL_ENABLED: bool = True
@@ -56,8 +61,9 @@ class Settings(BaseSettings):
     ENABLE_OUTPUT_VALIDATION: bool = True
 
     # ========== Application ==========
+    ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
-    USE_MOCK_DATA: bool = True
+    USE_MOCK_DATA: bool = False
     ALLOW_DB_FAILURE: bool = False
 
     # ========== Docker ==========
@@ -81,6 +87,18 @@ class Settings(BaseSettings):
     def get_db_port(self) -> int:
         val = os.getenv("MYSQL_PORT")
         return int(val) if val is not None else self.DB_PORT
+
+    def get_allowed_extensions_list(self) -> list[str]:
+        """Return allowed extensions: trimmed, lowercased, dotted, empty segments skipped."""
+        extensions: list[str] = []
+        for raw in self.ALLOWED_EXTENSIONS.split(","):
+            ext = raw.strip().lower()
+            if not ext:
+                continue
+            if not ext.startswith("."):
+                ext = f".{ext}"
+            extensions.append(ext)
+        return extensions
 
 
 settings = Settings()
