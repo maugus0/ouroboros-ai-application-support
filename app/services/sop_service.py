@@ -155,7 +155,7 @@ class SOPService:
                 feedback = list(feedback) + issues
 
         version = 1
-        if request.parent_sop_id:
+        if request.parent_sop_id and not settings.ALLOW_DB_FAILURE:
             parent = await self._repo.get_by_id(request.parent_sop_id)
             if parent:
                 version = int(parent.get("version") or 1) + 1

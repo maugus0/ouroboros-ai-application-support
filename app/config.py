@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     # ========== Application ==========
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
-    USE_MOCK_DATA: bool = True
+    USE_MOCK_DATA: bool = False
     ALLOW_DB_FAILURE: bool = False
 
     # ========== Docker ==========
@@ -89,7 +89,16 @@ class Settings(BaseSettings):
         return int(val) if val is not None else self.DB_PORT
 
     def get_allowed_extensions_list(self) -> list[str]:
-        return [ext.strip() for ext in self.ALLOWED_EXTENSIONS.split(",")]
+        """Return allowed extensions: trimmed, lowercased, dotted, empty segments skipped."""
+        extensions: list[str] = []
+        for raw in self.ALLOWED_EXTENSIONS.split(","):
+            ext = raw.strip().lower()
+            if not ext:
+                continue
+            if not ext.startswith("."):
+                ext = f".{ext}"
+            extensions.append(ext)
+        return extensions
 
 
 settings = Settings()

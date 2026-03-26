@@ -53,3 +53,12 @@ def test_allowed_extensions_list():
     exts = settings.get_allowed_extensions_list()
     assert ".pdf" in exts
     assert ".docx" in exts
+
+
+def test_allowed_extensions_list_normalizes(monkeypatch):
+    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ALLOWED_EXTENSIONS", " PDF , .DOCX ,, txt ")
+    exts = settings.get_allowed_extensions_list()
+    assert exts == [".pdf", ".docx", ".txt"]

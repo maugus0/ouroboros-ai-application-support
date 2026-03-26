@@ -75,7 +75,7 @@ class CoverLetterService:
             word_count = len(text.split())
 
         version = 1
-        if request.parent_letter_id:
+        if request.parent_letter_id and not settings.ALLOW_DB_FAILURE:
             parent = await self._repo.get_by_id(request.parent_letter_id)
             if parent:
                 version = int(parent.get("version") or 1) + 1

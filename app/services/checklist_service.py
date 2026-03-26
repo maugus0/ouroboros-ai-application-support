@@ -7,7 +7,7 @@ from app.config import settings
 from app.core.logging import get_logger
 from app.models.checklist_models import ChecklistCreateRequest, ChecklistItem, ChecklistResponse
 from app.repositories.mysql_checklist_repo import ChecklistRepository
-from app.utils.db_rows import checklist_row_to_dict
+from app.utils.db_rows import checklist_items_for_update, checklist_row_to_dict
 from app.utils.exceptions import NotFoundError
 from app.utils.helpers import generate_uuid
 
@@ -112,13 +112,7 @@ class ChecklistService:
         if not row:
             raise NotFoundError("Checklist")
 
-        items_raw = row.get("items")
-        if isinstance(items_raw, str):
-            items = json.loads(items_raw)
-        elif isinstance(items_raw, list):
-            items = list(items_raw)
-        else:
-            items = []
+        items = checklist_items_for_update(row.get("items"))
 
         found = False
         for it in items:

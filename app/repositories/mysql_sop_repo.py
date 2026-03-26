@@ -1,6 +1,7 @@
 """SOP CRUD repository with versioning support."""
 
 import json
+from collections import deque
 from typing import Any
 
 from app.core.logging import get_logger
@@ -72,9 +73,10 @@ class SOPRepository(MySQLBaseRepository):
             pid = cur.get("parent_sop_id")
             cur = await self.get_by_id(pid) if pid else None
 
-        queue: list[str] = [sop_id]
+        # Seed with every ancestor and the starting node so sibling branches under the same root are included.
+        queue: deque[str] = deque(seen.keys())
         while queue:
-            cid = queue.pop(0)
+            cid = queue.popleft()
             children = await self.execute_query(
                 f"SELECT * FROM {self.TABLE} WHERE parent_sop_id = %s",
                 (cid,),

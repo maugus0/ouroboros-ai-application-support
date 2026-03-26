@@ -1,9 +1,11 @@
 """Helpers for mapping MySQL rows to API models."""
 
 import json
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
+
+from app.utils.exceptions import ValidationError
 
 
 def _parse_json_field(value: Any) -> Any:
@@ -34,6 +36,23 @@ def checklist_items_from_row(items: Any) -> list[dict[str, Any]]:
     parsed = _parse_json_field(items)
     if isinstance(parsed, list):
         return parsed
+    return []
+
+
+def checklist_items_for_update(items_raw: Any) -> list[dict[str, Any]]:
+    """Parse checklist ``items`` from a row for in-place updates; strict JSON for string blobs."""
+    if isinstance(items_raw, list):
+        return list(items_raw)
+    if isinstance(items_raw, str):
+        if not items_raw.strip():
+            return []
+        try:
+            parsed = json.loads(items_raw)
+        except json.JSONDecodeError as exc:
+            raise ValidationError("Checklist items contain invalid JSON") from exc
+        if not isinstance(parsed, list):
+            raise ValidationError("Checklist items must be a JSON array")
+        return list(parsed)
     return []
 
 
@@ -114,9 +133,9 @@ def checklist_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
 def deadline_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
     """Normalise a ``deadline_entries`` row for ``DeadlineResponse``."""
     dd = row.get("deadline_date")
+    if isinstance(dd, datetime):
+        dd = dd.date()
     dt = row.get("deadline_time")
-    if hasattr(dd, "isoformat") and not isinstance(dd, datetime):
-        pass
     rsa = row.get("reminder_sent_at")
     created = row.get("created_at")
     updated = row.get("updated_at")
@@ -124,7 +143,7 @@ def deadline_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
         "id": row["id"],
         "user_id": row["user_id"],
         "checklist_id": row.get("checklist_id"),
-        "deadline_date": dd if isinstance(dd, date) else dd,
+        "deadline_date": dd,
         "deadline_time": dt,
         "item_description": row["item_description"],
         "item_category": row.get("item_category") or "application",
