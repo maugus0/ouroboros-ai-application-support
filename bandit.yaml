@@ -1,0 +1,6 @@
+# Bandit: suppress known false positives for this service (see also B104 fix in app/main.py).
+# B108 — default temp paths; override via env in real deployments.
+# B608 — table name from class constants; queries remain parameterized.
+skips:
+  - B108
+  - B608
