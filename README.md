@@ -153,7 +153,7 @@ The Application Support Agent is a critical microservice in the Ouroboros AI pla
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Python | 3.11+ | Runtime |
+| Python | 3.12+ | Runtime |
 | MySQL | 8.0+ | Database |
 | OpenAI API Key | — | Primary LLM provider |
 | Anthropic API Key | — | Fallback LLM provider (optional but recommended) |

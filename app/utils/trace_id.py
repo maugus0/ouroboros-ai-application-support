@@ -30,5 +30,5 @@ def get_bound_trace_id() -> str:
         if tid:
             return str(tid)
     except Exception:  # pylint: disable=broad-exception-caught
-        pass
+        return generate_trace_id()
     return generate_trace_id()
