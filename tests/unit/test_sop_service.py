@@ -66,7 +66,11 @@ async def test_generate_calls_llm_when_not_mock(monkeypatch):
     retrieval.fetch_references = AsyncMock(return_value=[])
 
     svc = SOPService(llm=llm, sop_repo=AsyncMock(), retrieval=retrieval)
-    req = SOPGenerateRequest(user_id="user-1", user_profile={"name": "A"}, target_program={"field_of_study": "CS"})
+    req = SOPGenerateRequest(
+        user_id="user-1",
+        user_profile={"name": "A"},
+        target_program={"field_of_study": "CS", "university_name": "word"},
+    )
     res = await svc.generate(req)
     assert res.user_id == "user-1"
     assert res.word_count >= 500
@@ -115,7 +119,7 @@ async def test_generate_parent_skips_repo_lookup_when_allow_db_failure(monkeypat
     req = SOPGenerateRequest(
         user_id="user-1",
         user_profile={"name": "A"},
-        target_program={"field_of_study": "CS"},
+        target_program={"field_of_study": "CS", "university_name": "word"},
         parent_sop_id="parent-1",
     )
     res = await svc.generate(req)
@@ -157,7 +161,11 @@ async def test_generate_quality_review_parse_failure_sets_heuristic_score(monkey
     retrieval.fetch_references = AsyncMock(return_value=[])
 
     svc = SOPService(llm=llm, sop_repo=AsyncMock(), retrieval=retrieval)
-    req = SOPGenerateRequest(user_id="user-1", user_profile={"name": "A"}, target_program={"field_of_study": "CS"})
+    req = SOPGenerateRequest(
+        user_id="user-1",
+        user_profile={"name": "A"},
+        target_program={"field_of_study": "CS", "university_name": "word"},
+    )
     res = await svc.generate(req)
     assert res.quality_score is not None
     assert res.quality_feedback

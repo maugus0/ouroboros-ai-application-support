@@ -166,18 +166,33 @@ class SOPService:
             logger.warning("quality_review_parse_failed", error=str(exc))
             quality_parse_failed = True
             final_text = expanded_text
-            quality_score = compute_quality_score(expanded_text)
+            quality_score = compute_quality_score(
+                expanded_text,
+                target_program=target,
+                program_id=request.program_id,
+            )
             feedback = []
 
         if settings.ENABLE_OUTPUT_VALIDATION:
-            ok, issues = validate_sop(final_text)
+            ok, issues = validate_sop(
+                final_text,
+                target_program=target,
+                program_id=request.program_id,
+            )
             if not ok:
                 feedback = list(feedback) + issues
             if quality_parse_failed:
                 note = "LLM quality review could not be parsed; score is heuristic."
                 feedback = [note] + list(feedback) if feedback else [note]
             if not ok:
-                quality_score = min(float(quality_score), compute_quality_score(final_text))
+                quality_score = min(
+                    float(quality_score),
+                    compute_quality_score(
+                        final_text,
+                        target_program=target,
+                        program_id=request.program_id,
+                    ),
+                )
         elif quality_parse_failed:
             feedback = ["LLM quality review could not be parsed; score is heuristic."]
 
@@ -231,6 +246,12 @@ class SOPService:
         )
 
     async def _generate_mock(self, request: SOPGenerateRequest) -> SOPResponse:
+        sanitize_dict(dict(request.user_profile))
+        sanitize_dict(dict(request.target_program))
+        prefs = dict(request.user_preferences)
+        if request.refinement_instructions:
+            prefs = {**prefs, "refinement_instructions": request.refinement_instructions}
+        sanitize_dict(prefs)
         t0 = time.perf_counter()
         sop_id = generate_uuid()
         body = (
