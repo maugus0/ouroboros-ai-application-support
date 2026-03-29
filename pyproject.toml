@@ -1,6 +1,6 @@
 [tool.black]
 line-length = 120
-target-version = ["py311"]
+target-version = ["py312"]
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -21,7 +21,7 @@ skip_gitignore = false
 known_first_party = ["app"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 ignore_missing_imports = true
 strict_optional = false
 warn_return_any = false

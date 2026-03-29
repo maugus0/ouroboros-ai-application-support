@@ -1,5 +1,5 @@
 [MAIN]
-py-version = 3.11
+py-version = 3.12
 
 [BASIC]
 good-names=_pool,_client,i,j,k,_,exc,fd,Run,id
