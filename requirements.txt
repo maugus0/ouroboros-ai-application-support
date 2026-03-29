@@ -6,6 +6,7 @@ python-multipart>=0.0.12
 # Database (raw SQL with connection pooling - no ORM)
 aiomysql>=0.2.0
 mysql-connector-python>=9.1.0
+cryptography>=42.0.0  # MySQL 8 caching_sha2_password (aiomysql / PyMySQL)
 
 # LLM Clients
 openai>=1.59.0

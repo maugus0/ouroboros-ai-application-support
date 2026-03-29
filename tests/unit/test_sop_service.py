@@ -121,3 +121,60 @@ async def test_generate_parent_skips_repo_lookup_when_allow_db_failure(monkeypat
     res = await svc.generate(req)
     assert res.version == 1
     sop_repo.get_by_id.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_generate_quality_review_parse_failure_sets_heuristic_score(monkeypatch):
+    monkeypatch.setattr(settings, "USE_MOCK_DATA", False)
+    monkeypatch.setattr(settings, "ALLOW_DB_FAILURE", True)
+    monkeypatch.setattr(settings, "ENABLE_OUTPUT_VALIDATION", True)
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(settings, "ANTHROPIC_API_KEY", "")
+
+    llm = MagicMock()
+    llm.generate = AsyncMock(
+        side_effect=[
+            {
+                "content": {
+                    "introduction_theme": "t",
+                    "body_points": ["a", "b"],
+                    "conclusion_theme": "c",
+                    "suggested_tone": "professional",
+                },
+                "metadata": {"llm_provider": "openai", "model_name": "gpt-test"},
+            },
+            {
+                "content": " ".join(["word"] * 600),
+                "metadata": {"llm_provider": "openai", "model_name": "gpt-test"},
+            },
+            {
+                "content": {},
+                "metadata": {"llm_provider": "openai", "model_name": "gpt-test"},
+            },
+        ]
+    )
+    retrieval = MagicMock()
+    retrieval.fetch_references = AsyncMock(return_value=[])
+
+    svc = SOPService(llm=llm, sop_repo=AsyncMock(), retrieval=retrieval)
+    req = SOPGenerateRequest(user_id="user-1", user_profile={"name": "A"}, target_program={"field_of_study": "CS"})
+    res = await svc.generate(req)
+    assert res.quality_score is not None
+    assert res.quality_feedback
+    assert any("heuristic" in f.lower() for f in res.quality_feedback)
+
+
+@pytest.mark.asyncio
+async def test_generate_mock_persists_match_attribution_snapshot(monkeypatch):
+    monkeypatch.setattr(settings, "USE_MOCK_DATA", True)
+    monkeypatch.setattr(settings, "ALLOW_DB_FAILURE", False)
+
+    sop_repo = AsyncMock()
+    svc = SOPService(llm=AsyncMock(), sop_repo=sop_repo, retrieval=AsyncMock())
+    attr = {"overall_score": 0.91, "dimensions": {"research_fit": 0.88}}
+    req = SOPGenerateRequest(user_id="user-1", program_id="prog-1", match_attribution=attr)
+    await svc.generate(req)
+
+    sop_repo.create.assert_awaited_once()
+    saved = sop_repo.create.await_args.args[0]
+    assert saved["match_attribution_snapshot"] == attr

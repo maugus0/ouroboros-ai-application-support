@@ -15,7 +15,7 @@ error()   { echo -e "${RED}  $1${NC}"; }
 warning() { echo -e "${YELLOW}  $1${NC}"; }
 
 VENV_ACTIVATED=false
-for VENV_DIR in ".venv" "venv" "env"; do
+for VENV_DIR in ".venv-ci" ".venv" "venv" "env"; do
     if [ -d "${VENV_DIR}" ] && [ -f "${VENV_DIR}/bin/activate" ]; then
         source "${VENV_DIR}/bin/activate"
         VENV_ACTIVATED=true

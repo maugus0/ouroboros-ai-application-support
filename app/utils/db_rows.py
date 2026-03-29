@@ -69,6 +69,11 @@ def sop_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
     qs = row.get("quality_score")
     if qs is not None:
         qs = _decimal_to_float(qs)
+    attr = _parse_json_field(row.get("match_attribution_snapshot"))
+    attr_dict: dict[str, Any] | None = None
+    if isinstance(attr, dict):
+        attr_dict = attr
+
     return {
         "id": row["id"],
         "user_id": row["user_id"],
@@ -78,6 +83,7 @@ def sop_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
         "word_count": int(row.get("word_count") or 0),
         "quality_score": qs,
         "quality_feedback": feedback,
+        "match_attribution_snapshot": attr_dict,
         "llm_model_used": row.get("llm_model_used"),
         "llm_fallback_used": bool(row.get("llm_fallback_used")),
         "total_processing_time_ms": (

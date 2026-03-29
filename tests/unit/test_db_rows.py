@@ -26,3 +26,24 @@ def test_sop_row_to_dict_quality_feedback_json_string():
     }
     d = sop_row_to_dict(row)
     assert d["quality_feedback"] == ["a", "b"]
+
+
+def test_sop_row_to_dict_match_attribution_snapshot():
+    row = {
+        "id": "s1",
+        "user_id": "u1",
+        "program_id": "p1",
+        "version": 1,
+        "content": "x",
+        "word_count": 1,
+        "quality_score": None,
+        "quality_feedback": None,
+        "llm_model_used": None,
+        "llm_fallback_used": 0,
+        "total_processing_time_ms": None,
+        "created_at": None,
+        "updated_at": None,
+        "match_attribution_snapshot": '{"overall_score": 0.9}',
+    }
+    d = sop_row_to_dict(row)
+    assert d["match_attribution_snapshot"] == {"overall_score": 0.9}
