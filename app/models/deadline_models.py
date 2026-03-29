@@ -1,7 +1,7 @@
 """Pydantic schemas for deadline tracking endpoints."""
 
 from datetime import date, datetime, time
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -11,6 +11,8 @@ class DeadlineCreateRequest(BaseModel):
 
     user_id: str
     checklist_id: str | None = None
+    source_type: Literal["program", "scholarship", "manual", "other"] = "manual"
+    source_id: str | None = Field(default=None, max_length=128)
     deadline_date: date
     deadline_time: time | None = None
     item_description: str = Field(..., max_length=500)
@@ -35,6 +37,8 @@ class DeadlineResponse(BaseModel):
     id: str
     user_id: str
     checklist_id: str | None = None
+    source_type: str = "manual"
+    source_id: str | None = None
     deadline_date: date
     deadline_time: time | None = None
     item_description: str
@@ -45,3 +49,28 @@ class DeadlineResponse(BaseModel):
     reminder_sent_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class DeadlineTimelineEntry(DeadlineResponse):
+    """Deadline row enriched for student timeline (sorting + highlight + reminders)."""
+
+    timeline_status: str
+    days_until_deadline: int
+    is_highlighted: bool
+    is_past: bool
+    reminder_recommended: bool
+
+
+class DeadlineSyncRequest(BaseModel):
+    """Bulk ingest: extract deadlines from program and scholarship records."""
+
+    user_id: str
+    programs: list[dict[str, Any]] = Field(default_factory=list)
+    scholarships: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class DeadlineSyncResponse(BaseModel):
+    """Result of a sync / extract operation."""
+
+    created_count: int
+    skipped_duplicates: int

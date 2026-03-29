@@ -40,6 +40,8 @@ async def test_update_delegates_to_repo(monkeypatch):
         "id": "d1",
         "user_id": "u1",
         "checklist_id": None,
+        "source_type": "manual",
+        "source_id": None,
         "deadline_date": date(2026, 2, 1),
         "deadline_time": None,
         "item_description": "x",

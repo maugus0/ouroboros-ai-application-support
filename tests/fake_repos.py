@@ -42,4 +42,5 @@ class FakeDeadlineRepository:
         return self._store.get(deadline_id)
 
     async def get_by_user(self, user_id: str) -> list[dict[str, Any]]:
-        return [d for d in self._store.values() if d.get("user_id") == user_id]
+        rows = [d for d in self._store.values() if d.get("user_id") == user_id]
+        return sorted(rows, key=lambda r: (r.get("deadline_date"), str(r.get("deadline_time") or "")))

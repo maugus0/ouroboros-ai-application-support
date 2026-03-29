@@ -1,12 +1,14 @@
 """Versioned application endpoints (orchestrator-friendly paths)."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.middleware.service_auth import require_service_token
 from app.models.checklist_models import ChecklistCreateRequest, ChecklistItemUpdate, ChecklistResponse
 from app.models.common_models import StandardResponse
+from app.models.deadline_models import DeadlineSyncRequest, DeadlineSyncResponse, DeadlineTimelineEntry
 from app.models.sop_models import SOPGenerateRequest, SOPResponse
 from app.services.checklist_service import ChecklistService
+from app.services.deadline_service import DeadlineService
 from app.services.sop_service import SOPService
 
 router = APIRouter(
@@ -56,3 +58,22 @@ async def update_application_checklist_item_v1(
     service = ChecklistService()
     data = await service.update_item(checklist_id, item_id, update.status)
     return StandardResponse(success=True, message="Checklist updated", data=data)
+
+
+@router.get("/deadlines/{user_id}", response_model=StandardResponse[list[DeadlineTimelineEntry]])
+async def list_application_deadlines_v1(
+    user_id: str,
+    approaching_days: int = Query(30, ge=1, le=366, description="Highlight window for upcoming items"),
+):
+    """List deadlines for a user: chronological order, passed vs upcoming, 30-day highlight window."""
+    service = DeadlineService()
+    data = await service.list_timeline_for_user(user_id, approaching_days=approaching_days)
+    return StandardResponse(success=True, message="OK", data=data)
+
+
+@router.post("/deadlines/sync", response_model=StandardResponse[DeadlineSyncResponse])
+async def sync_application_deadlines_v1(body: DeadlineSyncRequest):
+    """Extract deadlines from program and scholarship payloads and persist (skip duplicates)."""
+    service = DeadlineService()
+    data = await service.sync_from_sources(body.user_id, body.programs, body.scholarships)
+    return StandardResponse(success=True, message="Deadlines synced", data=data)

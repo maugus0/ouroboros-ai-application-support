@@ -149,6 +149,8 @@ def deadline_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
         "id": row["id"],
         "user_id": row["user_id"],
         "checklist_id": row.get("checklist_id"),
+        "source_type": row.get("source_type") or "manual",
+        "source_id": row.get("source_id"),
         "deadline_date": dd,
         "deadline_time": dt,
         "item_description": row["item_description"],
