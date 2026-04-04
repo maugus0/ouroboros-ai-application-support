@@ -2,8 +2,6 @@
 
 from contextlib import asynccontextmanager
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.interval import IntervalTrigger
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
@@ -12,7 +10,7 @@ from fastapi.responses import JSONResponse
 from app.api import applications, checklist, cover_letter, deadline, health, sop
 from app.config import APP_VERSION, settings
 from app.core.logging import get_logger, setup_logging
-from app.jobs.deadline_reminder_job import run_deadline_reminder_scan
+from app.jobs.deadline_reminder_scheduler import start_deadline_reminder_scheduler
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.repositories.db_pool import DatabasePoolConfig, close_pool, create_pool
 from app.utils.exceptions import ApplicationSupportBaseError
@@ -46,25 +44,17 @@ async def lifespan(_application: FastAPI):
     else:
         logger.warning("database_skipped", reason="ALLOW_DB_FAILURE is True")
 
-    scheduler: AsyncIOScheduler | None = None
-    if settings.DEADLINE_REMINDER_SCHEDULER_ENABLED and not settings.ALLOW_DB_FAILURE:
-        scheduler = AsyncIOScheduler()
-        scheduler.add_job(
-            run_deadline_reminder_scan,
-            IntervalTrigger(minutes=max(1, settings.DEADLINE_REMINDER_INTERVAL_MINUTES)),
-            id="deadline_reminder_scan",
-            replace_existing=True,
-        )
-        scheduler.start()
-        logger.info(
-            "deadline_reminder_scheduler_started",
-            interval_minutes=settings.DEADLINE_REMINDER_INTERVAL_MINUTES,
-        )
+    scheduler = start_deadline_reminder_scheduler(
+        enabled=settings.DEADLINE_REMINDER_SCHEDULER_ENABLED,
+        allow_db_failure=settings.ALLOW_DB_FAILURE,
+        interval_minutes=settings.DEADLINE_REMINDER_INTERVAL_MINUTES,
+        logger=logger,
+    )
 
     yield
 
     if scheduler is not None:
-        scheduler.shutdown(wait=False)
+        scheduler.shutdown(wait=True)
 
     await close_pool()
     logger.info("application_support_agent_stopped")

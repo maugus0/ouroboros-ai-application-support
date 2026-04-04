@@ -146,6 +146,7 @@ The Application Support Agent is a critical microservice in the Ouroboros AI pla
 - **Prompt injection detection** — Regex for template tags, instruction overrides, and obvious markup
 - **Prompt guardrails** — User JSON wrapped as **DATA** blocks so profile text cannot masquerade as system rules
 - **Output validation** — Leakage / echoed jailbreak patterns, cliché regex + list, **program relevance** check, quality score
+- **Threat model** — Mitigations vs out-of-scope assumptions are summarized under [Security / Threat Model](#threat-model)
 
 ---
 
@@ -315,7 +316,9 @@ migrations/
 ├── 003_create_application_checklists.sql
 ├── 004_create_deadline_entries.sql
 ├── 005_create_sop_references.sql
-└── 006_create_llm_call_logs.sql
+├── 006_create_llm_call_logs.sql
+├── 007_deadline_source_fields.sql
+└── 008_match_attribution_snapshot_if_missing.sql
 ```
 
 ---
@@ -552,6 +555,23 @@ This service handles user-provided text that feeds directly into LLM prompts, ma
 
 4. **Mock / CI path** — With `USE_MOCK_DATA=true`, `SOPService._generate_mock` still runs **the same input sanitization** as the live path so malicious payloads fail before any mock body is returned.
 
+### Threat Model
+
+**Mitigated in this service (design intent)**
+
+- **Prompt injection and instruction smuggling** in user-supplied text — input pattern checks, DATA-block guardrails, and post-generation output checks reduce (but cannot mathematically eliminate) the risk of the model following attacker-controlled instructions.
+- **Unbounded or malformed text** — length caps, control-character handling, and structured sanitization for nested payloads.
+- **Low-quality or off-topic generations** — relevance heuristics and quality scoring catch some generic or unrelated drafts before they are treated as acceptable SOPs.
+- **Casual unauthenticated API use** — protected routes expect a shared `X-Service-Token` aligned with deployment config (callers that lack the token should not reach business logic).
+
+**Explicitly out of scope / not solely addressed here**
+
+- **Compromise of upstream dependencies** — a broken or hostile LLM API, orchestrator, or dependency supply chain is a platform and vendor-trust problem, not fully solvable inside this microservice.
+- **Network and infrastructure attacks** — DDoS, TLS misconfiguration, VPC breaches, and similar controls belong to hosting, API gateways, and platform security.
+- **Full content policy / legal compliance** — jurisdiction-specific rules, hate speech, PII handling policies, and enterprise DLP are not exhaustively enforced by the validators described above.
+- **Insider or token theft** — anyone with a valid service token can call the API; rotation, vaulting, and least-privilege deployment are operational concerns.
+- **Data at rest / backup exposure** — MySQL hardening, encryption, and access control are deployment responsibilities.
+
 ### Configuration (env)
 
 | Variable | Role |
@@ -565,6 +585,7 @@ This service handles user-provided text that feeds directly into LLM prompts, ma
 - `tests/unit/test_input_sanitizer.py` — length, whitespace, patterns, control-byte stripping.
 - `tests/unit/test_output_validator.py` — leakage, generics, relevance scoring.
 - `tests/unit/test_sop_security_malicious.py` — adversarial strings and HTTP **422** on `/sop/generate` and `/api/v1/applications/generate-sop`.
+- `tests/unit/test_deadline_reminder_scheduler.py` — optional deadline reminder scheduler start/skip behaviour.
 
 ---
 
@@ -750,7 +771,7 @@ ouroboros-ai-application-support/
 │   ├── sop_quality_review_v1.json
 │   ├── cover_letter_generation_v1.json
 │   └── cv_improvement_v1.json
-├── migrations/                      # SQL migration files (001-006)
+├── migrations/                      # SQL migration files (001-008)
 ├── scripts/
 │   ├── run_migrations.py
 │   ├── seed_sop_references.py

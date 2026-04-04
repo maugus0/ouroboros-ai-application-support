@@ -75,7 +75,6 @@ def _relevance_strings(target_program: dict[str, Any], program_id: str | None) -
         "university",
         "program_title",
         "field_of_study",
-        "degree_level",
     )
     seen: set[str] = set()
     out: list[str] = []
@@ -98,12 +97,10 @@ def _relevance_strings(target_program: dict[str, Any], program_id: str | None) -
 
 
 def _text_mentions_reference(haystack_lower: str, ref_lower: str) -> bool:
-    """Match full phrase substring or short tokens as whole words (e.g. ``cs``)."""
-    if ref_lower in haystack_lower:
-        return True
+    """Short alphabetic tokens must match as whole words; longer refs use substring match."""
     if len(ref_lower) <= 4 and ref_lower.isalpha():
         return bool(re.search(rf"\b{re.escape(ref_lower)}\b", haystack_lower, re.IGNORECASE))
-    return False
+    return ref_lower in haystack_lower
 
 
 def check_program_relevance(

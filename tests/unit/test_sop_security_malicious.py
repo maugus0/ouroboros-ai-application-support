@@ -69,6 +69,17 @@ def test_check_program_relevance_acronym_cs():
     assert ok and msg is None
 
 
+def test_cs_substring_inside_unrelated_word_does_not_pass_relevance():
+    """``cs`` inside e.g. 'becsause' must not count (word-boundary match only for short tokens)."""
+    ok, msg = check_program_relevance(
+        "I code becsause I enjoy building systems.",
+        {"field_of_study": "CS"},
+        None,
+    )
+    assert not ok
+    assert msg is not None
+
+
 def test_post_sop_generate_rejects_prompt_injection_in_profile(
     service_token_header, mock_target_program, mock_match_attribution
 ):
