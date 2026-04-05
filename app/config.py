@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     RUN_STARTUP_SCRIPTS: bool = True
     DOCKER_MYSQL_PORT: int = 3308
 
+    # ========== Deadline reminders (optional APScheduler in lifespan) ==========
+    DEADLINE_REMINDER_SCHEDULER_ENABLED: bool = False
+    DEADLINE_REMINDER_INTERVAL_MINUTES: int = 360
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
     def get_db_host(self) -> str:

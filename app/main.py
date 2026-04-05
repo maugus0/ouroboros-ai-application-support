@@ -7,9 +7,10 @@ from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
-from app.api import checklist, cover_letter, deadline, health, sop
+from app.api import applications, checklist, cover_letter, deadline, health, sop
 from app.config import APP_VERSION, settings
 from app.core.logging import get_logger, setup_logging
+from app.jobs.deadline_reminder_scheduler import start_deadline_reminder_scheduler
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.repositories.db_pool import DatabasePoolConfig, close_pool, create_pool
 from app.utils.exceptions import ApplicationSupportBaseError
@@ -43,7 +44,17 @@ async def lifespan(_application: FastAPI):
     else:
         logger.warning("database_skipped", reason="ALLOW_DB_FAILURE is True")
 
+    scheduler = start_deadline_reminder_scheduler(
+        enabled=settings.DEADLINE_REMINDER_SCHEDULER_ENABLED,
+        allow_db_failure=settings.ALLOW_DB_FAILURE,
+        interval_minutes=settings.DEADLINE_REMINDER_INTERVAL_MINUTES,
+        logger=logger,
+    )
+
     yield
+
+    if scheduler is not None:
+        scheduler.shutdown(wait=True)
 
     await close_pool()
     logger.info("application_support_agent_stopped")
@@ -88,6 +99,7 @@ app.add_middleware(LoggingMiddleware)
 # -- Routers -----------------------------------------------------------
 
 app.include_router(health.router)
+app.include_router(applications.router)
 app.include_router(sop.router)
 app.include_router(cover_letter.router)
 app.include_router(checklist.router)
@@ -107,6 +119,26 @@ def custom_openapi():
         routes=app.routes,
     )
     schema["info"]["x-logo"] = {"url": "https://ouroboros.ai/logo.png"}
+
+    # So Swagger UI "Authorize" can send X-Service-Token on Try it out requests.
+    schema.setdefault("components", {})
+    schema["components"].setdefault("securitySchemes", {})
+    schema["components"]["securitySchemes"]["ServiceToken"] = {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Service-Token",
+        "description": "Same value as X_SERVICE_TOKEN in server .env",
+    }
+    public_paths = {"/", "/health"}
+    for path, path_item in schema.get("paths", {}).items():
+        if path in public_paths:
+            continue
+        for method in ("get", "post", "put", "patch", "delete"):
+            op = path_item.get(method)
+            if not isinstance(op, dict):
+                continue
+            op.setdefault("security", [{"ServiceToken": []}])
+
     app.openapi_schema = schema
     return schema
 

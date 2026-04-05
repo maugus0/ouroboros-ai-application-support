@@ -17,14 +17,16 @@ class DeadlineRepository(MySQLBaseRepository):
         """Insert a new deadline entry. Returns the deadline ID."""
         query = f"""
             INSERT INTO {self.TABLE}
-            (id, user_id, checklist_id, deadline_date, deadline_time,
+            (id, user_id, checklist_id, source_type, source_id, deadline_date, deadline_time,
              item_description, item_category, priority)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         params = (
             deadline_data["id"],
             deadline_data["user_id"],
             deadline_data.get("checklist_id"),
+            deadline_data.get("source_type", "manual"),
+            deadline_data.get("source_id"),
             deadline_data["deadline_date"],
             deadline_data.get("deadline_time"),
             deadline_data["item_description"],
@@ -74,3 +76,24 @@ class DeadlineRepository(MySQLBaseRepository):
             ORDER BY deadline_date ASC
         """
         return await self.execute_query(query, (user_id, days_ahead))
+
+    async def list_pending_reminder_candidates(self, days: int = 30) -> list[dict[str, Any]]:
+        """Deadlines that are pending, not yet flagged, and within the next ``days`` (inclusive)."""
+        query = f"""
+            SELECT * FROM {self.TABLE}
+            WHERE status = 'pending'
+              AND reminder_sent = FALSE
+              AND deadline_date >= CURDATE()
+              AND deadline_date <= DATE_ADD(CURDATE(), INTERVAL %s DAY)
+            ORDER BY deadline_date ASC
+        """
+        return await self.execute_query(query, (days,))
+
+    async def mark_reminder_sent(self, deadline_id: str) -> int:
+        """Set reminder flags for one deadline (idempotent if already sent)."""
+        query = f"""
+            UPDATE {self.TABLE}
+            SET reminder_sent = TRUE, reminder_sent_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND reminder_sent = FALSE
+        """
+        return await self.execute_write(query, (deadline_id,))

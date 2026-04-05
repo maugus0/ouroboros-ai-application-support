@@ -7,6 +7,7 @@ from app.config import settings
 from app.core.logging import get_logger
 from app.models.checklist_models import ChecklistCreateRequest, ChecklistItem, ChecklistResponse
 from app.repositories.mysql_checklist_repo import ChecklistRepository
+from app.services.checklist_item_builder import build_default_checklist_items
 from app.utils.db_rows import checklist_items_for_update, checklist_row_to_dict
 from app.utils.exceptions import NotFoundError
 from app.utils.helpers import generate_uuid
@@ -39,11 +40,20 @@ class ChecklistService:
     async def create_checklist(self, request: ChecklistCreateRequest) -> ChecklistResponse:
         checklist_id = generate_uuid()
         items: list[dict[str, Any]] = []
-        for it in request.items:
-            d = it.model_dump()
-            if not d.get("id"):
-                d["id"] = generate_uuid()
-            items.append(d)
+        if request.items:
+            for it in request.items:
+                d = it.model_dump()
+                if not d.get("id"):
+                    d["id"] = generate_uuid()
+                items.append(d)
+        else:
+            for row in build_default_checklist_items(
+                request.program_requirements,
+                request.target_program,
+            ):
+                row = dict(row)
+                row["id"] = generate_uuid()
+                items.append(row)
 
         overall, pct = self.compute_status(items)
 

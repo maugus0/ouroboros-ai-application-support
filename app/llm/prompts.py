@@ -13,6 +13,11 @@ fast at development time.
 
 from typing import Any
 
+from app.llm.sop_prompt_bundle import (
+    SOP_EXPANSION_PROMPT_FILE,
+    SOP_OUTLINE_PROMPT_FILE,
+    SOP_QUALITY_REVIEW_PROMPT_FILE,
+)
 from app.utils.prompt_utils import build_prompt_json, build_prompt_text
 
 _VALID_FORMATS: frozenset[str] = frozenset({"json", "text"})
@@ -30,8 +35,8 @@ def get_sop_outline_prompt(
     """Build the SOP outline system prompt (pipeline step 1)."""
     _require_prompt_format(fmt)
     if fmt == "text":
-        return build_prompt_text("sop_outline_v1.json", context)
-    return build_prompt_json("sop_outline_v1.json", context)
+        return build_prompt_text(SOP_OUTLINE_PROMPT_FILE, context)
+    return build_prompt_json(SOP_OUTLINE_PROMPT_FILE, context)
 
 
 def get_sop_expansion_prompt(
@@ -41,8 +46,8 @@ def get_sop_expansion_prompt(
     """Build the SOP expansion system prompt (pipeline step 2)."""
     _require_prompt_format(fmt)
     if fmt == "text":
-        return build_prompt_text("sop_expansion_v1.json", context)
-    return build_prompt_json("sop_expansion_v1.json", context)
+        return build_prompt_text(SOP_EXPANSION_PROMPT_FILE, context)
+    return build_prompt_json(SOP_EXPANSION_PROMPT_FILE, context)
 
 
 def get_sop_quality_review_prompt(
@@ -52,8 +57,8 @@ def get_sop_quality_review_prompt(
     """Build the SOP quality review system prompt (pipeline step 3)."""
     _require_prompt_format(fmt)
     if fmt == "text":
-        return build_prompt_text("sop_quality_review_v1.json", context)
-    return build_prompt_json("sop_quality_review_v1.json", context)
+        return build_prompt_text(SOP_QUALITY_REVIEW_PROMPT_FILE, context)
+    return build_prompt_json(SOP_QUALITY_REVIEW_PROMPT_FILE, context)
 
 
 def get_cover_letter_prompt(

@@ -30,8 +30,8 @@ class SOPRepository(MySQLBaseRepository):
             (id, user_id, program_id, version, parent_sop_id, content, word_count,
              quality_score, quality_feedback, outline, expanded_content,
              llm_model_used, llm_fallback_used, total_processing_time_ms, prompt_version,
-             retrieved_reference_ids)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             retrieved_reference_ids, match_attribution_snapshot)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         params = (
             sop_data["id"],
@@ -50,6 +50,7 @@ class SOPRepository(MySQLBaseRepository):
             sop_data.get("total_processing_time_ms"),
             sop_data.get("prompt_version"),
             _json_param(sop_data.get("retrieved_reference_ids")),
+            _json_param(sop_data.get("match_attribution_snapshot")),
         )
         await self.execute_write(query, params)
         return sop_data["id"]

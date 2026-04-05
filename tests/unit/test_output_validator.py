@@ -56,3 +56,20 @@ def test_compute_quality_score_penalised():
     content = "I am passionate about my dream university. From a young age I knew. " + " ".join(["word"] * 100)
     score = compute_quality_score(content)
     assert score < 1.0
+
+
+def test_validate_regex_generic_phrase():
+    filler = " ".join(["word"] * 550)
+    content = (
+        f"{filler} I am passionate about science. From a young age I studied. "
+        "Throughout my academic journey I improved. This was a deeply passionate transformative experience."
+    )
+    _ok, issues = validate_sop(content)
+    assert any("generic" in i.lower() for i in issues)
+
+
+def test_validate_sop_relevance_penalises_compute_score():
+    content = " ".join(["word"] * 600)
+    with_ref = compute_quality_score(content, target_program={"university_name": "word"})
+    no_ref = compute_quality_score(content, target_program={"university_name": "OtherUniversity"})
+    assert with_ref >= no_ref

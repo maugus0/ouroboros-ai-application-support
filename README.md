@@ -142,10 +142,11 @@ The Application Support Agent is a critical microservice in the Ouroboros AI pla
 
 ### Security (Critical)
 
-- **Input sanitization** — Length limits, whitespace normalisation, control character detection
-- **Prompt injection detection** — Pattern matching for common injection attempts
-- **Prompt guardrails** — Clear DATA/INSTRUCTION boundaries in prompts
-- **Output validation** — Prompt leakage detection, generic phrase detection, quality scoring
+- **Input sanitization** — Max **10,000** chars per string (`MAX_INPUT_LENGTH`), Unicode **Cc** stripped, whitespace normalised
+- **Prompt injection detection** — Regex for template tags, instruction overrides, and obvious markup
+- **Prompt guardrails** — User JSON wrapped as **DATA** blocks so profile text cannot masquerade as system rules
+- **Output validation** — Leakage / echoed jailbreak patterns, cliché regex + list, **program relevance** check, quality score
+- **Threat model** — Mitigations vs out-of-scope assumptions are summarized under [Security / Threat Model](#threat-model)
 
 ---
 
@@ -315,7 +316,9 @@ migrations/
 ├── 003_create_application_checklists.sql
 ├── 004_create_deadline_entries.sql
 ├── 005_create_sop_references.sql
-└── 006_create_llm_call_logs.sql
+├── 006_create_llm_call_logs.sql
+├── 007_deadline_source_fields.sql
+└── 008_match_attribution_snapshot_if_missing.sql
 ```
 
 ---
@@ -533,19 +536,56 @@ This service handles user-provided text that feeds directly into LLM prompts, ma
 ### Security Layers
 
 1. **Input Sanitization** (`app/security/input_sanitizer.py`)
-   - Length limits (configurable via `MAX_INPUT_LENGTH`)
-   - Whitespace normalisation
-   - Control pattern detection (system overrides, assistant tags)
+   - **Length cap** — Each string field is capped at `MAX_INPUT_LENGTH` (default **10,000** characters); oversize input returns **422**.
+   - **Control characters** — Unicode category **Cc** (NUL, bells, device controls, etc.) is stripped before checks; optional preservation of `\n` / `\t` for readability, then normalized to single spaces for LLM-bound text.
+   - **Pattern detection** — When `ENABLE_PROMPT_INJECTION_DETECTION=true`, substrings resembling chat templates or overrides are rejected (e.g. `IGNORE PREVIOUS INSTRUCTIONS`, `<|im_start|>`, `[INST]`, `### SYSTEM`, `NEW INSTRUCTIONS:`, obvious `script` tags). Raises **422** (`PromptInjectionError`).
+   - **Recursive structures** — `sanitize_dict` walks nested dicts and lists; **list elements that are dicts** are sanitized (e.g. `education[]` entries).
 
 2. **Prompt Guardrails** (`app/security/prompt_guardrails.py`)
-   - Clear DATA/INSTRUCTION boundaries in prompts
-   - User data wrapped in clearly marked sections
-   - System instructions protected from data override
+   - User JSON is wrapped in labeled **DATA** blocks (`wrap_user_data`, `build_safe_prompt`) so profile text is framed as data, not instructions.
+   - SOP pipeline uses these wrappers on outline, expansion, and quality-review user messages.
 
-3. **Output Validation** (`app/security/output_validator.py`)
-   - Prompt leakage detection (AI self-references, system markers)
-   - Generic phrase detection (quality signal)
-   - Quality scoring (0.0-1.0)
+3. **Output Validation** (`app/security/output_validator.py`) — runs when `ENABLE_OUTPUT_VALIDATION=true` after the quality-review step
+   - **Length** — Word count vs `SOP_MIN_WORDS` / `SOP_MAX_WORDS`.
+   - **Generic / template phrases** — Substring list plus **regex** clichés (e.g. “deeply passionate”, “transformative experience”); too many flags an issue and lowers score.
+   - **Prompt leakage** — Output must not echo assistant/system tropes or internal markers (`as an AI`, `=====`, `STUDENT_CONTEXT`, pipe tags, etc.).
+   - **Injected instruction echoes** — Patterns such as “ignore all instructions”, “developer mode”, `jailbreak`, repeated role tags.
+   - **Program relevance** — Draft must mention at least one **meaningful** anchor from `target_program` (e.g. `university_name`, `program_name`, `field_of_study`; short acronyms like **CS** matched as whole words) or a non-UUID `program_id`, so generic unrelated essays are flagged.
+   - **Quality score** — `compute_quality_score()` incorporates the above (and sentence-length heuristics) into a **0.0–1.0** signal; issues are appended to `quality_feedback` on the API response.
+
+4. **Mock / CI path** — With `USE_MOCK_DATA=true`, `SOPService._generate_mock` still runs **the same input sanitization** as the live path so malicious payloads fail before any mock body is returned.
+
+### Threat Model
+
+**Mitigated in this service (design intent)**
+
+- **Prompt injection and instruction smuggling** in user-supplied text — input pattern checks, DATA-block guardrails, and post-generation output checks reduce (but cannot mathematically eliminate) the risk of the model following attacker-controlled instructions.
+- **Unbounded or malformed text** — length caps, control-character handling, and structured sanitization for nested payloads.
+- **Low-quality or off-topic generations** — relevance heuristics and quality scoring catch some generic or unrelated drafts before they are treated as acceptable SOPs.
+- **Casual unauthenticated API use** — protected routes expect a shared `X-Service-Token` aligned with deployment config (callers that lack the token should not reach business logic).
+
+**Explicitly out of scope / not solely addressed here**
+
+- **Compromise of upstream dependencies** — a broken or hostile LLM API, orchestrator, or dependency supply chain is a platform and vendor-trust problem, not fully solvable inside this microservice.
+- **Network and infrastructure attacks** — DDoS, TLS misconfiguration, VPC breaches, and similar controls belong to hosting, API gateways, and platform security.
+- **Full content policy / legal compliance** — jurisdiction-specific rules, hate speech, PII handling policies, and enterprise DLP are not exhaustively enforced by the validators described above.
+- **Insider or token theft** — anyone with a valid service token can call the API; rotation, vaulting, and least-privilege deployment are operational concerns.
+- **Data at rest / backup exposure** — MySQL hardening, encryption, and access control are deployment responsibilities.
+
+### Configuration (env)
+
+| Variable | Role |
+|----------|------|
+| `MAX_INPUT_LENGTH` | Max characters per sanitized string (default `10000`) |
+| `ENABLE_PROMPT_INJECTION_DETECTION` | Reject suspicious input patterns (default `true`) |
+| `ENABLE_OUTPUT_VALIDATION` | Post-generation SOP checks + relevance (default `true`) |
+
+### Tests
+
+- `tests/unit/test_input_sanitizer.py` — length, whitespace, patterns, control-byte stripping.
+- `tests/unit/test_output_validator.py` — leakage, generics, relevance scoring.
+- `tests/unit/test_sop_security_malicious.py` — adversarial strings and HTTP **422** on `/sop/generate` and `/api/v1/applications/generate-sop`.
+- `tests/unit/test_deadline_reminder_scheduler.py` — optional deadline reminder scheduler start/skip behaviour.
 
 ---
 
@@ -598,6 +638,7 @@ tests/
 │   ├── test_security.py            # X-Service-Token validation
 │   ├── test_input_sanitizer.py     # Input sanitization + injection detection
 │   ├── test_output_validator.py    # Output validation + quality scoring
+│   ├── test_sop_security_malicious.py  # Adversarial SOP inputs + API 422
 │   ├── test_prompt_utils.py        # Prompt template loading & context merge
 │   ├── test_llm_prompts.py         # Prompt generation (JSON + text formats)
 │   ├── test_llm_pipeline_service.py # OpenAI → Anthropic fallback
@@ -730,7 +771,7 @@ ouroboros-ai-application-support/
 │   ├── sop_quality_review_v1.json
 │   ├── cover_letter_generation_v1.json
 │   └── cv_improvement_v1.json
-├── migrations/                      # SQL migration files (001-006)
+├── migrations/                      # SQL migration files (001-008)
 ├── scripts/
 │   ├── run_migrations.py
 │   ├── seed_sop_references.py

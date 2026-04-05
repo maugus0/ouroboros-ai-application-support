@@ -35,6 +35,11 @@ def test_missing_token_on_deadlines():
     assert response.status_code == 401
 
 
+def test_missing_token_on_applications_deadlines_v1():
+    response = client.get("/api/v1/applications/deadlines/user-123")
+    assert response.status_code == 401
+
+
 def test_missing_token_on_checklists():
     response = client.get("/checklists/user-123")
     assert response.status_code == 401

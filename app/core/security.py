@@ -14,7 +14,8 @@ def validate_service_token(request: Request) -> None:
     Raises:
         HTTPException: If token is missing or invalid.
     """
-    token = request.headers.get("X-Service-Token")
+    # Default "" so .strip() is safe when the header is omitted (get returns None without default).
+    token = request.headers.get("X-Service-Token", "").strip()
 
     if not token:
         logger.warning("missing_service_token", path=request.url.path)
@@ -23,7 +24,8 @@ def validate_service_token(request: Request) -> None:
             detail="X-Service-Token header required",
         )
 
-    if token != settings.X_SERVICE_TOKEN:
+    expected = settings.X_SERVICE_TOKEN.strip()
+    if token != expected:
         logger.warning("invalid_service_token", path=request.url.path)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

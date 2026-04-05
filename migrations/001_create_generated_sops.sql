@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS generated_sops (
 
     -- Retrieval metadata
     retrieved_reference_ids JSON NULL COMMENT 'Array of SOP reference IDs used for style',
+    match_attribution_snapshot JSON NULL COMMENT 'Match scoring / attribution payload at generation time (eligibility or orchestrator)',
 
     -- Audit
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

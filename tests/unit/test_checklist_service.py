@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.config import settings
+from app.models.checklist_models import ChecklistCreateRequest
 from app.services.checklist_service import ChecklistService
 from app.utils.exceptions import ValidationError
 
@@ -43,6 +44,24 @@ def test_compute_status_explicit_in_progress():
     overall, pct = ChecklistService.compute_status(items)
     assert overall == "in_progress"
     assert pct == 0.0
+
+
+@pytest.mark.asyncio
+async def test_create_checklist_empty_items_uses_defaults(monkeypatch):
+    monkeypatch.setattr(settings, "ALLOW_DB_FAILURE", True)
+    svc = ChecklistService(repo=AsyncMock())
+    req = ChecklistCreateRequest(
+        user_id="u-auto",
+        program_id="p1",
+        program_requirements="Portfolio and writing sample required.",
+    )
+    res = await svc.create_checklist(req)
+    assert res.user_id == "u-auto"
+    joined = " ".join(i.description.lower() for i in res.items)
+    assert "transcript" in joined
+    assert "portfolio" in joined or "writing sample" in joined
+    assert res.completion_percentage == 0.0
+    assert res.overall_status == "not_started"
 
 
 @pytest.mark.asyncio
