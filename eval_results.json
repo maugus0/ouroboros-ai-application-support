@@ -1,0 +1,65 @@
+{
+  "run_at": "2026-04-18T10:10:08.786902+00:00",
+  "commit_sha": "unknown",
+  "avg_score": 7.5,
+  "baseline_score": 0.0,
+  "passed": true,
+  "cases": [
+    {
+      "id": "sop-stem-phd",
+      "score": 7.5,
+      "reason": "Dry run mock evaluation.",
+      "latency_ms": 1002,
+      "operation": "sop_generate"
+    },
+    {
+      "id": "sop-mba-career-switch",
+      "score": 7.5,
+      "reason": "Dry run mock evaluation.",
+      "latency_ms": 1002,
+      "operation": "sop_generate"
+    },
+    {
+      "id": "sop-humanities-master",
+      "score": 7.5,
+      "reason": "Dry run mock evaluation.",
+      "latency_ms": 1001,
+      "operation": "sop_generate"
+    },
+    {
+      "id": "sop-undergrad-cs",
+      "score": 7.5,
+      "reason": "Dry run mock evaluation.",
+      "latency_ms": 1002,
+      "operation": "sop_generate"
+    },
+    {
+      "id": "sop-medical-residency",
+      "score": 7.5,
+      "reason": "Dry run mock evaluation.",
+      "latency_ms": 1002,
+      "operation": "sop_generate"
+    },
+    {
+      "id": "cl-swe-intern",
+      "score": 7.5,
+      "reason": "Dry run mock evaluation.",
+      "latency_ms": 1002,
+      "operation": "cover_letter_generate"
+    },
+    {
+      "id": "cl-data-scientist",
+      "score": 7.5,
+      "reason": "Dry run mock evaluation.",
+      "latency_ms": 1002,
+      "operation": "cover_letter_generate"
+    },
+    {
+      "id": "cl-marketing-manager",
+      "score": 7.5,
+      "reason": "Dry run mock evaluation.",
+      "latency_ms": 1002,
+      "operation": "cover_letter_generate"
+    }
+  ]
+}

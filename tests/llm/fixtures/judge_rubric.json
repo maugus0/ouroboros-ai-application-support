@@ -1,0 +1,10 @@
+{
+  "sop_generate": {
+    "rubric": "Score 1-10 based on:\n1. Structure (3 pts): Contains clear introduction, body paragraphs with specific examples, and a strong conclusion.\n2. Relevance (3 pts): Directly addresses the target program and incorporates the applicant's background naturally.\n3. No Hallucination (2 pts): Does not invent experiences, skills, or generic filler beyond what is provided in the input.\n4. Tone (2 pts): Maintains a professional, persuasive, and authentic academic tone.\nNote: Provide a single integer or float score between 1 and 10.",
+    "min_passing_score": 6.0
+  },
+  "cover_letter_generate": {
+    "rubric": "Score 1-10 based on:\n1. Opening (2 pts): Strong hook that states the target position and company clearly.\n2. Fit (3 pts): Connects the applicant's skills and experience to the company's presumed needs.\n3. Specific Examples (3 pts): Highlights specific, quantifiable achievements rather than just listing skills.\n4. Call to Action (2 pts): Ends with a clear, professional request for an interview or next steps.\nNote: Provide a single integer or float score between 1 and 10.",
+    "min_passing_score": 6.0
+  }
+}

@@ -142,8 +142,69 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------
-  # Stage 2: Type check, coverage, static + dependency security (parallel)
+  # Stage 2: Type check, coverage, static + dependency security, prompt linting (parallel)
   # ---------------------------------------------------------------------------
+  prompt-lint:
+    name: Prompt Lint & Token Validation
+    runs-on: ubuntu-latest
+    needs: [format-check, lint-check, unit-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dev dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run prompt lint tests
+        env:
+          ALLOW_DB_FAILURE: "true"
+          USE_MOCK_DATA: "true"
+        run: pytest tests/llm/test_prompt_lint.py -v --tb=short
+
+  prompt-diff-alert:
+    name: Prompt Change Detector
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [format-check, lint-check, unit-tests]
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed prompt files
+        id: prompt-diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD --name-only | grep -E "(app/llm/|tests/llm/fixtures/|prompts/)" > changed_prompts.txt || true
+          if [ -s changed_prompts.txt ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "files=$(cat changed_prompts.txt | xargs)" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR if prompts changed
+        if: steps.prompt-diff.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          COMMENT="⚠️ **Prompt Files Changed** ⚠️\n\nThe following prompt-related files were modified in this PR:\n\`\`\`\n$(cat changed_prompts.txt)\n\`\`\`\n\nLLM evaluation will run automatically after merging to \`main\` to detect any quality regression."
+          gh pr comment $PR_URL --body "$COMMENT"
+          echo -e "$COMMENT" >> $GITHUB_STEP_SUMMARY
+
   type-check:
     name: Type Checking (mypy)
     runs-on: ubuntu-latest
@@ -398,7 +459,55 @@ jobs:
           path: trivy-results.json
 
   # ---------------------------------------------------------------------------
-  # Stage 5: Summary artifact for all jobs.
+  # Stage 5: LLM Evaluation — only after a real push to main (requires docker-build to ensure code is sound).
+  # ---------------------------------------------------------------------------
+  llm-eval:
+    name: LLM Output Quality Eval
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      EVAL_BASELINE_SCORE: ${{ vars.EVAL_BASELINE_SCORE || '0.0' }}
+      ALLOW_DB_FAILURE: "true"
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install tiktoken>=0.7.0  # Required for evals
+
+      - name: Run LLM evaluations
+        run: python scripts/run_evals.py
+
+      - name: Update eval baseline
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/store_eval_baseline.py
+
+      - name: Upload eval results
+        if: always() && hashFiles('eval_results.json') != ''
+        uses: actions/upload-artifact@v6
+        with:
+          name: eval-results
+          path: eval_results.json
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Stage 6: Summary artifact for all jobs.
   # `if: always()` lets this job run when trivy-scan is skipped (PRs). Skipped needs show as
   # `skipped` in the needs context — they do not block this job. (Without `if: always()`, a skipped
   # needed job would skip dependents; see GitHub docs: jobs.<job_id>.needs + conditional if.)
@@ -410,12 +519,15 @@ jobs:
       - format-check
       - lint-check
       - unit-tests
+      - prompt-lint
+      - prompt-diff-alert
       - type-check
       - integration-tests
       - security-static
       - security-scan
       - docker-build
       - trivy-scan
+      - llm-eval
     if: always()
     permissions:
       contents: read
@@ -433,14 +545,17 @@ jobs:
             echo "- Formatting (Black/isort): ${{ needs.format-check.result }}";
             echo "- Lint (flake8/pylint): ${{ needs.lint-check.result }}";
             echo "- Unit Tests: ${{ needs.unit-tests.result }}";
+            echo "- Prompt Lint: ${{ needs.prompt-lint.result }}";
+            echo "- Prompt Diff Alert: ${{ needs.prompt-diff-alert.result }}";
             echo "- Type Check (mypy): ${{ needs.type-check.result }}";
             echo "- Tests + Coverage: ${{ needs.integration-tests.result }}";
             echo "- Bandit: ${{ needs.security-static.result }}";
             echo "- Snyk OSS: ${{ needs.security-scan.result }}";
             echo "- Docker Build/Push: ${{ needs.docker-build.result }}";
             echo "- Trivy (container scan): ${{ needs.trivy-scan.result }}";
+            echo "- LLM Eval: ${{ needs.llm-eval.result }}";
             echo "";
-            echo "_Trivy runs on push to main only; on PRs the Trivy job is skipped (result: skipped)._";
+            echo "_Trivy and LLM Eval run on push to main only; on PRs they are skipped._";
           } > summary.md
 
       - name: Upload consolidated report bundle
