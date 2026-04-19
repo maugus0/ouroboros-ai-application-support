@@ -19,6 +19,7 @@ Microservice for the **Ouroboros AI** scholarship discovery platform. The Applic
 - [Prompt Engineering](#prompt-engineering)
 - [Version Control](#version-control)
 - [Security](#security)
+- [AI Governance & MLSecOps](#ai-governance--mlsecops)
 - [Development Workflow](#development-workflow)
 - [Testing](#testing)
 - [CI/CD Pipeline](#cicd-pipeline)
@@ -589,6 +590,29 @@ This service handles user-provided text that feeds directly into LLM prompts, ma
 
 ---
 
+## AI Governance & MLSecOps
+
+This service implements a comprehensive **MLSecOps/LLMSecOps** framework aligned with responsible AI principles (e.g., IMDA's Model AI Governance Framework).
+
+### Governance Principles
+
+| Principle | Implementation in OuroborosAI |
+|-----------|-------------------------------|
+| **Transparency** | Evaluation reports log `model_id`, `prompt_version`, and `token_usage` for every run. |
+| **Explainability** | Judge LLM providing natural language `reason` for quality scores in evaluation reports. |
+| **Fairness** | Automated bias detection testing demographic variants (name/gender) with a strict `bias_gap` limit. |
+| **Safety** | Multi-layer input sanitization, PII guardrails, and adversarial testing for prompt injection. |
+| **Auditability** | Version-controlled evaluation history stored on a dedicated `eval-history` audit branch. |
+
+### LLMSecOps Controls
+
+1.  **Shift-Left Security**: Prompt linting and PII scanning run on every Pull Request.
+2.  **Adversarial Defense**: Automated unit tests for prompt injection and malicious instruction smuggling.
+3.  **Governance in CI**: CI/CD pipeline blocks merges if quality drops below baseline or if bias is detected.
+4.  **Supply Chain Security**: Dependency scanning (Snyk) and container vulnerability scanning (Trivy).
+
+---
+
 ## Development Workflow
 
 ### Code Quality Checks
@@ -662,16 +686,25 @@ tests/
 
 ### Pipeline Stages
 
-| Stage | Description |
-|-------|-------------|
-| **Format** | Black + isort validation |
-| **Lint** | flake8 + pylint (both blocking) |
-| **Unit Tests** | `pytest tests/unit/` with JUnit XML artifact |
-| **Type Check** | mypy — blocking (after format + lint) |
-| **Tests + Coverage** | Full `pytest tests/` with HTML + Cobertura XML |
-| **Security Audit** | Bandit (JSON artifact) |
-| **Docker Build** | Verify image builds — no push |
-| **Summary** | Markdown table of all job results |
+| Stage | Description | MLSecOps Role |
+|-------|-------------|---------------|
+| **Format & Lint** | Black, isort, flake8, pylint | Code Quality |
+| **Unit Tests** | `pytest tests/unit/` | Functional Correctness |
+| **Prompt Lint** | Validate prompt templates & tokens | **Prompt Governance** |
+| **PII Guard** | Scan fixtures for sensitive data | **Data Protection** |
+| **Type Check** | mypy static analysis | Code Reliability |
+| **Security Audit** | Bandit & Snyk OSS | **SAST / SCA** |
+| **Docker Build** | Verify container image | Supply Chain |
+| **Trivy Scan** | Scan image for CVEs | **Infrastructure Security** |
+| **LLM Eval** | Quality & Bias evaluation | **AI Governance** |
+| **Summary** | Consolidated report bundle | Transparency |
+
+### Automated Evaluations
+
+The `llm-eval` stage runs `scripts/run_evals.py` which:
+- Compares current output quality against a versioned **Baseline**.
+- Performs **Bias Detection** by testing demographic variants.
+- Stores results in `eval-history` branch for long-term auditability.
 
 ---
 
