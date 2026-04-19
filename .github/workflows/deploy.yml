@@ -208,7 +208,6 @@ jobs:
   pii-guard:
     name: PII Guard (Fixtures)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     needs: [format-check, lint-check, unit-tests]
     steps:
       - name: Checkout code
@@ -348,6 +347,16 @@ jobs:
         if: env.SNYK_TOKEN != ''
         uses: snyk/actions/setup@v1.0.0
 
+      - name: Set up Python
+        if: env.SNYK_TOKEN != ''
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        if: env.SNYK_TOKEN != ''
+        run: pip install -r requirements.txt
+
       - name: Snyk Open Source scan (Python requirements)
         if: env.SNYK_TOKEN != ''
         run: |
@@ -355,6 +364,7 @@ jobs:
           snyk test \
             --file=requirements.txt \
             --severity-threshold=high \
+            --command=python3 \
             --sarif-file-output=snyk.sarif
 
       # Upload to Code Scanning only when enabled, token exists, SARIF exists, and (on PRs) from same repo (no fork SARIF upload).
@@ -379,6 +389,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - prompt-lint
+      - pii-guard
       - type-check
       - integration-tests
       - security-static
