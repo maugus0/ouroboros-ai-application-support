@@ -12,80 +12,80 @@ Antigravity (AI Engineer)
 ---
 
 ## 1. User
-- Persona: Backend engineer / ML engineer làm việc trên `application-support`
-- Role: Developer push code lên GitHub và cần biết ngay khi prompt thay đổi gây regression
+- Persona: Backend engineer / ML engineer working on `application-support`
+- Role: Developer pushes code to GitHub and needs to know immediately when prompt changes cause regression
 
 ## 2. Problem
 
-Hiện tại `application-support` đã có CI/CD pipeline đầy đủ (format → lint → tests → docker → trivy),
-nhưng **không có bất kỳ bước nào kiểm soát chất lượng LLM output**.
+Currently, `application-support` has a complete CI/CD pipeline (format → lint → tests → docker → trivy),
+but **there are no steps to control the quality of LLM output**.
 
-Cụ thể:
-- Khi ai đó chỉnh file prompt JSON (`sop_outline_v1.json`, `cover_letter_generation_v1.json`, v.v.)
-  thì pipeline CI **không phát hiện** ra output LLM có thể thay đổi xấu đi.
-- Không có test nào kiểm tra: prompt có render đúng không? placeholder có bị thiếu không?
-  Token count có vượt model limit không?
-- Không có baseline để so sánh chất lượng output giữa các commit.
-- `mysql_llm_call_log_repo` đã log `tokens, latency, success` nhưng không log **quality score**.
+Specifically:
+- When someone edits the prompt JSON file (`sop_outline_v1.json`, `cover_letter_generation_v1.json`, etc.)
+  the CI pipeline **does not detect** that the LLM output may change for the worse.
+- There are no tests to check: does the prompt render correctly? Are any placeholders missing?
+  Does the token count exceed the model limit?
+- There is no baseline to compare the quality of output between commits.
+- `mysql_llm_call_log_repo` has logged `tokens, latency, success` but does not log **quality score**.
 
 ## 3. Goal
 
-Thêm một **LLMOps stage** vào CI/CD pipeline của `application-support` gồm 3 lớp:
+Add an **LLMOps stage** to the CI/CD pipeline of `application-support` consisting of 3 layers:
 
-1. **Prompt Lint** (chạy mọi PR, free, < 30s): validate cấu trúc prompt, token count, placeholder
-2. **Prompt Diff Alert** (chạy mọi PR, free): tự động comment lên PR khi file prompt thay đổi
-3. **LLM Eval / Quality Gate** (chạy chỉ khi push lên `main`, dùng real API): chạy golden test cases,
-   dùng LLM-as-judge chấm điểm, so sánh với baseline, fail nếu regression
+1. **Prompt Lint** (runs on every PR, free, < 30s): validate prompt structure, token count, placeholders
+2. **Prompt Diff Alert** (runs on every PR, free): automatically comment on the PR when the prompt file changes
+3. **LLM Eval / Quality Gate** (runs only when pushing to `main`, using real API): run golden test cases,
+   use LLM-as-judge to score, compare with baseline, fail if regression
 
 ## 4. Expected Behavior
 
 ### PR flow:
-1. Developer mở PR có sửa `app/llm/` hoặc bất kỳ file prompt nào
-2. Job `prompt-lint` chạy: kiểm tra JSON valid, tất cả placeholder được inject, token count ước tính < 80% limit
-3. Job `prompt-diff-alert` chạy: detect file prompt thay đổi → comment lên PR liệt kê file nào đổi và cảnh báo
-4. Nếu prompt-lint fail → PR bị block merge
+1. Developer opens a PR that modifies `app/llm/` or any prompt file
+2. Job `prompt-lint` runs: checks for valid JSON, all placeholders are injected, estimated token count < 80% limit
+3. Job `prompt-diff-alert` runs: detects prompt file changes → comments on the PR listing which files changed and warns
+4. If prompt-lint fails → PR is blocked from merging
 
 ### Push to main flow:
-1. Sau khi docker-build thành công, job `llm-eval` chạy
-2. Script `scripts/run_evals.py` load golden test cases từ `tests/llm/fixtures/`
-3. Với mỗi test case: gọi LLM thật → nhận output → dùng LLM-as-judge (GPT-4o-mini) chấm điểm
-4. So sánh average score với `EVAL_BASELINE_SCORE` (GitHub repo variable)
-5. Nếu score giảm > 0.5 điểm so với baseline → pipeline fail
-6. Nếu pass → cập nhật baseline mới vào repo variable
+1. After a successful docker-build, job `llm-eval` runs
+2. Script `scripts/run_evals.py` loads golden test cases from `tests/llm/fixtures/`
+3. For each test case: call the real LLM → receive output → use LLM-as-judge (GPT-4o-mini) to score
+4. Compare average score with `EVAL_BASELINE_SCORE` (GitHub repo variable)
+5. If the score decreases by > 0.5 points compared to the baseline → pipeline fails
+6. If pass → update the new baseline into the repo variable
 
 ## 5. Acceptance Criteria
 
-- [ ] `prompt-lint` job chạy thành công trên PR không có thay đổi prompt
-- [ ] `prompt-lint` job fail khi có prompt file JSON invalid
-- [ ] `prompt-lint` job fail khi token count ước tính vượt 80% model limit
-- [ ] `prompt-diff-alert` tạo comment trên PR khi có file trong `app/llm/` thay đổi
-- [ ] `llm-eval` job chỉ chạy khi push lên `main`
-- [ ] `llm-eval` job fail khi score trung bình giảm > 0.5 so với baseline
-- [ ] `llm-eval` upload artifact `eval_results.json` sau mỗi lần chạy
-- [ ] Tất cả jobs mới follow cùng Python version và caching pattern với CI hiện tại
-- [ ] `tests/llm/test_prompt_lint.py` có thể chạy local không cần API key
-- [ ] Có ít nhất 3 golden test cases cho SOP và 2 cho cover letter
+- [ ] `prompt-lint` job runs successfully on PRs without prompt changes
+- [ ] `prompt-lint` job fails when there is an invalid prompt JSON file
+- [ ] `prompt-lint` job fails when the estimated token count exceeds 80% of the model limit
+- [ ] `prompt-diff-alert` creates a comment on the PR when there are changes to files in `app/llm/`
+- [ ] `llm-eval` job runs only when pushing to `main`
+- [ ] `llm-eval` job fails when the average score decreases by > 0.5 compared to the baseline
+- [ ] `llm-eval` uploads artifact `eval_results.json` after each run
+- [ ] All new jobs follow the same Python version and caching pattern as the current CI
+- [ ] `tests/llm/test_prompt_lint.py` can run locally without needing an API key
+- [ ] There are at least 3 golden test cases for SOP and 2 for cover letter
 
 ## 6. Non-Goals
 
-- Không implement streaming evaluation (chỉ request/response đơn)
-- Không tích hợp LangSmith, Promptfoo, hay bất kỳ external LLMOps platform nào
-- Không thêm eval cho `checklist_service` hay `deadline_service` trong feature này
-- Không thay đổi logic business của bất kỳ service nào hiện có
-- Không thêm database migration mới
+- Do not implement streaming evaluation (only single request/response)
+- Do not integrate LangSmith, Promptfoo, or any external LLMOps platform
+- Do not add eval for `checklist_service` or `deadline_service` in this feature
+- Do not change the business logic of any existing services
+- Do not add new database migrations
 
 ## 7. Open Questions
 
-- [ ] GPT-4o-mini dùng làm judge có đủ reliable chưa, hay cần dùng GPT-4o?
-- [ ] Baseline score lưu vào GitHub repo variable hay commit vào repo dưới dạng file?
-- [ ] Nếu `OPENAI_API_KEY` không được set ở CI → llm-eval skip hay fail?
-- [ ] Cost budget cho mỗi lần chạy eval (ước tính ~$0.50-$1.00/run)?
+- [ ] Is GPT-4o-mini used as a judge reliable enough, or should we use GPT-4o?
+- [ ] Should the baseline score be stored in a GitHub repo variable or committed to the repo as a file?
+- [ ] If `OPENAI_API_KEY` is not set in CI → should llm-eval skip or fail?
+- [ ] Cost budget for each eval run (estimated ~$0.50-$1.00/run)?
 
 ---
 
 ## Checklist before approval
-- [ ] User và problem đã được định nghĩa rõ ràng
-- [ ] Acceptance criteria có thể kiểm tra được
-- [ ] Non-goals đã được liệt kê
-- [ ] Không có architectural assumption nào chưa được approve
+- [ ] User and problem have been clearly defined
+- [ ] Acceptance criteria are verifiable
+- [ ] Non-goals have been listed
+- [ ] There are no architectural assumptions that have not been approved
 - [ ] Reviewed by human gate owner

@@ -5,6 +5,7 @@ import asyncio
 import json
 import os
 import sys
+import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -35,7 +36,13 @@ async def generate_response(operation: str, context: Dict[str, Any], dry_run: bo
     """Generates a response from the LLM based on the input context."""
     if dry_run:
         await asyncio.sleep(0.5)
-        return '{"draft": "This is a mock response from the LLM."}'
+        return {
+            "content": '{"draft": "This is a mock response from the LLM."}',
+            "model": "gpt-4o-mock",
+            "input_tokens": 100,
+            "output_tokens": 200,
+            "temperature": 0.7
+        }
 
     system_prompt = get_prompt_for_operation(operation, context)
     user_content = json.dumps(context, indent=2)
@@ -47,10 +54,11 @@ async def generate_response(operation: str, context: Dict[str, Any], dry_run: bo
             max_tokens=4000,
             response_format=None,  # Output is usually text or specific json, we evaluate as text
         )
-        return raw_response.get("content", "")
+        raw_response["temperature"] = 0.7  # Hardcoded in config usually
+        return raw_response
     except Exception as e:
         print(f"Error calling OpenAI for generation: {e}")
-        return ""
+        return {"content": "", "model": "unknown", "input_tokens": 0, "output_tokens": 0, "temperature": 0.7}
 
 
 async def judge_output(
@@ -59,7 +67,7 @@ async def judge_output(
     """Uses GPT-4o-mini to evaluate the generated output."""
     if dry_run:
         await asyncio.sleep(0.5)
-        return {"score": 7.5, "reason": "Dry run mock evaluation."}
+        return {"score": 7.5, "reason": "Dry run mock evaluation.", "model": "gpt-4o-mini-mock"}
 
     judge_system_prompt = (
         "You are an expert evaluator assessing the quality of AI-generated documents. "
@@ -96,19 +104,33 @@ async def judge_output(
             result = json.loads(content_str)
             if "score" not in result:
                 raise ValueError("JSON response missing 'score' field.")
-            return {"score": float(result["score"]), "reason": result.get("reason", "No reason provided.")}
+            return {
+                "score": float(result["score"]), 
+                "reason": result.get("reason", "No reason provided."),
+                "model": raw_response.get("model", "gpt-4o-mini")
+            }
         except Exception as e:
             print(f"Judge attempt {attempt + 1} failed: {e}")
             if attempt == 1:
                 return {"score": 0.0, "reason": f"Judge failed: {str(e)}"}
             await asyncio.sleep(1)
 
-    return {"score": 0.0, "reason": "Judge failed all attempts."}
+    return {"score": 0.0, "reason": "Judge failed all attempts.", "model": "unknown"}
 
 
 async def run_evals(dry_run: bool):
     """Main evaluation runner."""
     fixtures_dir = ROOT_DIR / "tests" / "llm" / "fixtures"
+    prompts_file = ROOT_DIR / "app" / "llm" / "prompts.py"
+
+    # Get prompt version
+    try:
+        prompt_version = subprocess.check_output(
+            ["git", "log", "--format=%h", "-n", "1", "--", str(prompts_file)], 
+            text=True
+        ).strip()
+    except Exception:
+        prompt_version = "unknown"
 
     # Load golden cases
     try:
@@ -136,8 +158,12 @@ async def run_evals(dry_run: bool):
     except ValueError:
         baseline_score = 0.0
 
+    bias_threshold = float(os.getenv("BIAS_THRESHOLD", "1.5"))
+    bias_hard_limit = float(os.getenv("BIAS_HARD_LIMIT", "3.0"))
+
     print(f"Starting evaluations (Dry run: {dry_run}). Total cases: {len(all_cases)}")
     print(f"Target Baseline Score: {baseline_score}")
+    print(f"Bias Threshold: {bias_threshold}, Hard Limit: {bias_hard_limit}")
     print("-" * 50)
 
     results = []
@@ -148,12 +174,17 @@ async def run_evals(dry_run: bool):
         start_time = time.perf_counter()
 
         # Generate response
-        generated_output = await generate_response(case["operation"], case["input"], dry_run)
+        generated_res = await generate_response(case["operation"], case["input"], dry_run)
+        generated_output = generated_res.get("content", "")
 
         if not generated_output:
             print(f"  -> Generation failed for {case['id']}")
             score = 0.0
             reason = "Generation failed or returned empty output."
+            model_id = "unknown"
+            judge_model_id = "unknown"
+            token_usage = {"prompt_tokens": 0, "completion_tokens": 0}
+            temperature = 0.7
         else:
             # Get specific rubric based on operation
             op_rubric = rubric_dict.get(case["operation"], {}).get("rubric", "Score 1-10.")
@@ -164,10 +195,18 @@ async def run_evals(dry_run: bool):
             )
             score = judge_res.get("score", 0.0)
             reason = judge_res.get("reason", "")
+            
+            model_id = generated_res.get("model", "unknown")
+            judge_model_id = judge_res.get("model", "unknown")
+            token_usage = {
+                "prompt_tokens": generated_res.get("input_tokens", 0),
+                "completion_tokens": generated_res.get("output_tokens", 0)
+            }
+            temperature = generated_res.get("temperature", 0.7)
 
         latency_ms = int((time.perf_counter() - start_time) * 1000)
 
-        print(f"  -> Score: {score}/10.0 (Latency: {latency_ms}ms)")
+        print(f"  -> Score: {score}/10.0 (Latency: {latency_ms}ms, Model: {model_id})")
         print(f"  -> Reason: {reason}")
 
         results.append(
@@ -177,9 +216,90 @@ async def run_evals(dry_run: bool):
                 "reason": reason,
                 "latency_ms": latency_ms,
                 "operation": case["operation"],
+                "prompt_version": prompt_version,
+                "temperature": temperature,
+                "token_usage": token_usage,
+                "model_id": model_id,
+                "judge_model_id": judge_model_id
             }
         )
         total_score += score
+
+    # Bias Evaluation
+    print("\n" + "=" * 50)
+    print("Starting Bias Detection Evaluations...")
+    bias_report = {
+        "max_bias_gap": 0.0,
+        "bias_threshold": bias_threshold,
+        "hard_limit": bias_hard_limit,
+        "cases": []
+    }
+    has_hard_fail = False
+
+    for case in all_cases:
+        variants = case.get("demographic_variants", [])
+        if not variants:
+            continue
+            
+        print(f"\nBias testing for {case['id']} ({len(variants)} variants)...")
+        variant_scores = []
+        tested_names = []
+        op_rubric = rubric_dict.get(case["operation"], {}).get("rubric", "Score 1-10.")
+        
+        for idx, variant in enumerate(variants):
+            if dry_run:
+                v_score = 7.0 if idx == 0 else 7.5
+                v_reason = "Mock bias variant."
+            else:
+                # Merge variant into input
+                v_input = case["input"].copy()
+                v_input.update(variant)
+                v_res = await generate_response(case["operation"], v_input, dry_run)
+                v_out = v_res.get("content", "")
+                v_judge = await judge_output(v_input, v_out, op_rubric, case.get("evaluation_criteria", ""), dry_run)
+                v_score = v_judge.get("score", 0.0)
+                v_reason = v_judge.get("reason", "")
+                
+            variant_scores.append(v_score)
+            tested_names.append(variant.get("student_name") or variant.get("applicant_name") or f"Variant {idx}")
+            print(f"  - {tested_names[-1]}: {v_score}/10")
+            
+        bias_gap = round(max(variant_scores) - min(variant_scores), 2)
+        if bias_gap > bias_report["max_bias_gap"]:
+            bias_report["max_bias_gap"] = bias_gap
+            
+        status = "ok"
+        if bias_gap > bias_hard_limit:
+            status = "hard_fail"
+            has_hard_fail = True
+            print(f"  -> ❌ HARD FAIL: Bias gap {bias_gap} exceeds limit {bias_hard_limit}!")
+        elif bias_gap > bias_threshold:
+            status = "warning"
+            print(f"  -> ⚠️ WARNING: Bias gap {bias_gap} exceeds threshold {bias_threshold}.")
+        else:
+            print(f"  -> ✅ OK: Bias gap {bias_gap}.")
+            
+        bias_report["cases"].append({
+            "case_id": case["id"],
+            "variants_tested": tested_names,
+            "scores": variant_scores,
+            "bias_gap": bias_gap,
+            "status": status
+        })
+
+    # Calculate latencies
+    latencies = sorted([r["latency_ms"] for r in results])
+    if latencies:
+        import statistics
+        latency_p50_ms = int(statistics.median(latencies))
+        idx_p95 = int(len(latencies) * 0.95)
+        latency_p95_ms = latencies[idx_p95] if idx_p95 < len(latencies) else latencies[-1]
+    else:
+        latency_p50_ms = 0
+        latency_p95_ms = 0
+
+    global_model_id = results[0]["model_id"] if results else "unknown"
+    global_judge_model_id = results[0]["judge_model_id"] if results else "unknown"
 
     avg_score = total_score / len(all_cases) if all_cases else 0.0
     passed = avg_score >= (baseline_score - 0.5)
@@ -187,14 +307,20 @@ async def run_evals(dry_run: bool):
     print("-" * 50)
     print(f"Evaluation Complete!")
     print(f"Average Score: {avg_score:.2f} (Baseline: {baseline_score:.2f})")
+    print(f"Latency P50: {latency_p50_ms}ms, P95: {latency_p95_ms}ms")
     print(f"Result: {'PASS' if passed else 'FAIL'}")
 
     report = {
         "run_at": datetime.now(timezone.utc).isoformat(),
         "commit_sha": os.getenv("GITHUB_SHA", "unknown"),
+        "model_id": global_model_id,
+        "judge_model_id": global_judge_model_id,
+        "latency_p50_ms": latency_p50_ms,
+        "latency_p95_ms": latency_p95_ms,
         "avg_score": round(avg_score, 2),
         "baseline_score": baseline_score,
         "passed": passed,
+        "bias_report": bias_report,
         "cases": results,
     }
 
@@ -204,6 +330,10 @@ async def run_evals(dry_run: bool):
 
     if not passed:
         print("FAIL: Average score dropped more than 0.5 points below baseline.")
+        sys.exit(1)
+        
+    if has_hard_fail:
+        print(f"FAIL: Bias gap exceeded hard limit of {bias_hard_limit} in at least one case.")
         sys.exit(1)
 
 

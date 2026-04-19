@@ -205,6 +205,23 @@ jobs:
           gh pr comment $PR_URL --body "$COMMENT"
           echo -e "$COMMENT" >> $GITHUB_STEP_SUMMARY
 
+  pii-guard:
+    name: PII Guard (Fixtures)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [format-check, lint-check, unit-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Check for PII in fixtures
+        run: python scripts/check_pii.py --path tests/llm/fixtures/
+
   type-check:
     name: Type Checking (mypy)
     runs-on: ubuntu-latest
@@ -460,7 +477,7 @@ jobs:
           path: trivy-results.json
 
   # ---------------------------------------------------------------------------
-  # Stage 5: LLM Evaluation — only after a real push to main (requires docker-build to ensure code is sound).
+  # Stage 5: LLM Evaluation & AI Governance
   # ---------------------------------------------------------------------------
   llm-eval:
     name: LLM Output Quality Eval
@@ -471,6 +488,8 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       EVAL_BASELINE_SCORE: ${{ vars.EVAL_BASELINE_SCORE || '0.0' }}
       ALLOW_DB_FAILURE: "true"
+      BIAS_THRESHOLD: "1.5"
+      BIAS_HARD_LIMIT: "3.0"
     permissions:
       contents: read
     steps:
@@ -499,6 +518,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/store_eval_baseline.py
 
+      - name: Push eval history to audit branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/push_eval_history.py
+
       - name: Upload eval results
         if: always() && hashFiles('eval_results.json') != ''
         uses: actions/upload-artifact@v6
@@ -522,6 +547,7 @@ jobs:
       - unit-tests
       - prompt-lint
       - prompt-diff-alert
+      - pii-guard
       - type-check
       - integration-tests
       - security-static
@@ -548,6 +574,7 @@ jobs:
             echo "- Unit Tests: ${{ needs.unit-tests.result }}";
             echo "- Prompt Lint: ${{ needs.prompt-lint.result }}";
             echo "- Prompt Diff Alert: ${{ needs.prompt-diff-alert.result }}";
+            echo "- PII Guard: ${{ needs.pii-guard.result }}";
             echo "- Type Check (mypy): ${{ needs.type-check.result }}";
             echo "- Tests + Coverage: ${{ needs.integration-tests.result }}";
             echo "- Bandit: ${{ needs.security-static.result }}";

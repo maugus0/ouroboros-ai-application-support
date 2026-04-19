@@ -15,19 +15,19 @@
 | T01 | Prompt Lint Tests — `tests/llm/test_prompt_lint.py` + fixtures + conftest | — | M | `done` |
 | T02 | Golden Eval Fixtures — `tests/llm/fixtures/*.json` | T01 | S | `done` |
 | T03 | Eval Runner Script — `scripts/run_evals.py` + LLM-as-judge | T02 | M | `done` |
-| T04 | CI/CD Jobs — thêm 3 jobs vào `deploy.yml` | T01, T03 | S | `done` |
+| T04 | CI/CD Jobs — add 3 jobs to `deploy.yml` | T01, T03 | S | `done` |
 | T05 | Baseline Script — `scripts/store_eval_baseline.py` + docs | T04 | S | `done` |
 
 ## Status Legend
-- `todo` — Chưa bắt đầu
-- `in-progress` — Đang làm
-- `review` — Code xong, chờ review
-- `done` — Reviewed và merged
-- `blocked` — Chờ dependency hoặc decision
+- `todo` — Not started
+- `in-progress` — In progress
+- `review` — Code completed, waiting for review
+- `done` — Reviewed and merged
+- `blocked` — Waiting for dependency or decision
 
 ## Notes
-- Mỗi task phải có task pack tương ứng trong `task-packs/Txx.md`
-- T01 và T02 không cần API key thật — chạy được local với mock
-- T03 cần `OPENAI_API_KEY` để test thật; có thể mock với `USE_MOCK_LLM=true`
-- T04 phụ thuộc T01 và T03 — không thể merge CI jobs trước khi test files tồn tại
-- T05 cần thiết cho automation nhưng có thể làm manual trước (update GitHub var bằng tay)
+- Each task must have a corresponding task pack in `task-packs/Txx.md`
+- T01 and T02 do not require a real API key — can run locally with mock
+- T03 requires `OPENAI_API_KEY` for real testing; can be mocked with `USE_MOCK_LLM=true`
+- T04 depends on T01 and T03 — cannot merge CI jobs before test files exist
+- T05 is necessary for automation but can be done manually first (update GitHub var manually)
