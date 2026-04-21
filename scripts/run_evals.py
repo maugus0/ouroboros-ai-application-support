@@ -2,10 +2,11 @@
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
+import statistics
 import sys
-import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +22,26 @@ from app.llm.openai_client import call_openai
 from app.llm.prompts import get_cover_letter_prompt, get_sop_outline_prompt
 
 
+def compute_prompt_version(prompts_dir: Path) -> str:
+    """Computes a deterministic version from the prompt template files."""
+    if not prompts_dir.exists() or not prompts_dir.is_dir():
+        return "unknown"
+    digest = hashlib.sha256()
+    try:
+        # Recursively find all JSON prompt templates
+        for prompt_file in sorted(prompts_dir.rglob("*.json")):
+            if not prompt_file.is_file():
+                continue
+            # Include relative path in hash to detect moves/renames
+            digest.update(str(prompt_file.relative_to(prompts_dir)).encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(prompt_file.read_bytes())
+            digest.update(b"\0")
+    except Exception:
+        return "unknown"
+    return digest.hexdigest()[:12]
+
+
 def get_prompt_for_operation(operation: str, context: Dict[str, Any]) -> str:
     """Gets the appropriate system prompt for the given operation."""
     if operation == "sop_generate":
@@ -32,7 +53,7 @@ def get_prompt_for_operation(operation: str, context: Dict[str, Any]) -> str:
         raise ValueError(f"Unknown operation: {operation}")
 
 
-async def generate_response(operation: str, context: Dict[str, Any], dry_run: bool) -> str:
+async def generate_response(operation: str, context: Dict[str, Any], dry_run: bool) -> Dict[str, Any]:
     """Generates a response from the LLM based on the input context."""
     if dry_run:
         await asyncio.sleep(0.5)
@@ -41,7 +62,7 @@ async def generate_response(operation: str, context: Dict[str, Any], dry_run: bo
             "model": "gpt-4o-mock",
             "input_tokens": 100,
             "output_tokens": 200,
-            "temperature": 0.7
+            "temperature": 0.7,
         }
 
     system_prompt = get_prompt_for_operation(operation, context)
@@ -49,12 +70,12 @@ async def generate_response(operation: str, context: Dict[str, Any], dry_run: bo
 
     try:
         raw_response = await call_openai(
-            user_content=user_content,
-            system_prompt=system_prompt,
+            prompt=user_content,
+            system_message=system_prompt,
             max_tokens=4000,
+            temperature=0.7,
             response_format=None,  # Output is usually text or specific json, we evaluate as text
         )
-        raw_response["temperature"] = 0.7  # Hardcoded in config usually
         return raw_response
     except Exception as e:
         print(f"Error calling OpenAI for generation: {e}")
@@ -62,7 +83,12 @@ async def generate_response(operation: str, context: Dict[str, Any], dry_run: bo
 
 
 async def judge_output(
-    input_context: Dict[str, Any], output_text: str, rubric: str, criteria: str, dry_run: bool
+    input_context: Dict[str, Any],
+    output_text: str,
+    rubric: str,
+    criteria: str,
+    dry_run: bool,
+    model_override: str = "gpt-4o-mini",
 ) -> Dict[str, Any]:
     """Uses GPT-4o-mini to evaluate the generated output."""
     if dry_run:
@@ -94,10 +120,11 @@ async def judge_output(
     for attempt in range(2):
         try:
             raw_response = await call_openai(
-                user_content=judge_user_prompt,
-                system_prompt=judge_system_prompt,
-                model_override="gpt-4o-mini",
+                prompt=judge_user_prompt,
+                system_message=judge_system_prompt,
+                model=model_override,
                 max_tokens=500,
+                temperature=0.7,
                 response_format="json",
             )
             content_str = raw_response.get("content", "{}")
@@ -105,9 +132,9 @@ async def judge_output(
             if "score" not in result:
                 raise ValueError("JSON response missing 'score' field.")
             return {
-                "score": float(result["score"]), 
+                "score": float(result["score"]),
                 "reason": result.get("reason", "No reason provided."),
-                "model": raw_response.get("model", "gpt-4o-mini")
+                "model": raw_response.get("model", "gpt-4o-mini"),
             }
         except Exception as e:
             print(f"Judge attempt {attempt + 1} failed: {e}")
@@ -121,16 +148,10 @@ async def judge_output(
 async def run_evals(dry_run: bool):
     """Main evaluation runner."""
     fixtures_dir = ROOT_DIR / "tests" / "llm" / "fixtures"
-    prompts_file = ROOT_DIR / "app" / "llm" / "prompts.py"
+    prompts_dir = ROOT_DIR / "prompts"
 
-    # Get prompt version
-    try:
-        prompt_version = subprocess.check_output(
-            ["git", "log", "--format=%h", "-n", "1", "--", str(prompts_file)], 
-            text=True
-        ).strip()
-    except Exception:
-        prompt_version = "unknown"
+    # Get prompt version from the actual prompt template source of truth
+    prompt_version = compute_prompt_version(prompts_dir)
 
     # Load golden cases
     try:
@@ -195,12 +216,12 @@ async def run_evals(dry_run: bool):
             )
             score = judge_res.get("score", 0.0)
             reason = judge_res.get("reason", "")
-            
+
             model_id = generated_res.get("model", "unknown")
             judge_model_id = judge_res.get("model", "unknown")
             token_usage = {
                 "prompt_tokens": generated_res.get("input_tokens", 0),
-                "completion_tokens": generated_res.get("output_tokens", 0)
+                "completion_tokens": generated_res.get("output_tokens", 0),
             }
             temperature = generated_res.get("temperature", 0.7)
 
@@ -220,7 +241,7 @@ async def run_evals(dry_run: bool):
                 "temperature": temperature,
                 "token_usage": token_usage,
                 "model_id": model_id,
-                "judge_model_id": judge_model_id
+                "judge_model_id": judge_model_id,
             }
         )
         total_score += score
@@ -228,24 +249,19 @@ async def run_evals(dry_run: bool):
     # Bias Evaluation
     print("\n" + "=" * 50)
     print("Starting Bias Detection Evaluations...")
-    bias_report = {
-        "max_bias_gap": 0.0,
-        "bias_threshold": bias_threshold,
-        "hard_limit": bias_hard_limit,
-        "cases": []
-    }
+    bias_report = {"max_bias_gap": 0.0, "bias_threshold": bias_threshold, "hard_limit": bias_hard_limit, "cases": []}
     has_hard_fail = False
 
     for case in all_cases:
         variants = case.get("demographic_variants", [])
         if not variants:
             continue
-            
+
         print(f"\nBias testing for {case['id']} ({len(variants)} variants)...")
         variant_scores = []
         tested_names = []
         op_rubric = rubric_dict.get(case["operation"], {}).get("rubric", "Score 1-10.")
-        
+
         for idx, variant in enumerate(variants):
             if dry_run:
                 v_score = 7.0 if idx == 0 else 7.5
@@ -259,15 +275,15 @@ async def run_evals(dry_run: bool):
                 v_judge = await judge_output(v_input, v_out, op_rubric, case.get("evaluation_criteria", ""), dry_run)
                 v_score = v_judge.get("score", 0.0)
                 v_reason = v_judge.get("reason", "")
-                
+
             variant_scores.append(v_score)
             tested_names.append(variant.get("student_name") or variant.get("applicant_name") or f"Variant {idx}")
             print(f"  - {tested_names[-1]}: {v_score}/10")
-            
+
         bias_gap = round(max(variant_scores) - min(variant_scores), 2)
         if bias_gap > bias_report["max_bias_gap"]:
             bias_report["max_bias_gap"] = bias_gap
-            
+
         status = "ok"
         if bias_gap > bias_hard_limit:
             status = "hard_fail"
@@ -278,22 +294,28 @@ async def run_evals(dry_run: bool):
             print(f"  -> ⚠️ WARNING: Bias gap {bias_gap} exceeds threshold {bias_threshold}.")
         else:
             print(f"  -> ✅ OK: Bias gap {bias_gap}.")
-            
-        bias_report["cases"].append({
-            "case_id": case["id"],
-            "variants_tested": tested_names,
-            "scores": variant_scores,
-            "bias_gap": bias_gap,
-            "status": status
-        })
+
+        bias_report["cases"].append(
+            {
+                "case_id": case["id"],
+                "variants_tested": tested_names,
+                "scores": variant_scores,
+                "bias_gap": bias_gap,
+                "status": status,
+            }
+        )
 
     # Calculate latencies
     latencies = sorted([r["latency_ms"] for r in results])
     if latencies:
-        import statistics
         latency_p50_ms = int(statistics.median(latencies))
-        idx_p95 = int(len(latencies) * 0.95)
-        latency_p95_ms = latencies[idx_p95] if idx_p95 < len(latencies) else latencies[-1]
+        if len(latencies) >= 2:
+            # Use statistics.quantiles (Python 3.8+) for consistent percentile calculation
+            # method='inclusive' matches the standard P95 definition for small samples
+            q = statistics.quantiles(latencies, n=100, method="inclusive")
+            latency_p95_ms = int(q[94])  # q is 0-indexed, so q[94] is the 95th percentile
+        else:
+            latency_p95_ms = latencies[0]
     else:
         latency_p50_ms = 0
         latency_p95_ms = 0
@@ -331,7 +353,7 @@ async def run_evals(dry_run: bool):
     if not passed:
         print("FAIL: Average score dropped more than 0.5 points below baseline.")
         sys.exit(1)
-        
+
     if has_hard_fail:
         print(f"FAIL: Bias gap exceeded hard limit of {bias_hard_limit} in at least one case.")
         sys.exit(1)
