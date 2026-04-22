@@ -33,6 +33,7 @@ async def call_openai(
     max_tokens: int | None = None,
     temperature: float | None = None,
     response_format: str | None = None,
+    model: str | None = None,
 ) -> dict[str, Any]:
     """Call OpenAI API with retry logic.
 
@@ -47,7 +48,7 @@ async def call_openai(
     messages.append({"role": "user", "content": prompt})
 
     kwargs: dict[str, Any] = {
-        "model": settings.OPENAI_MODEL,
+        "model": model or settings.OPENAI_MODEL,
         "messages": messages,
         "max_tokens": max_tokens or settings.OPENAI_MAX_TOKENS,
         "temperature": temperature if temperature is not None else settings.OPENAI_TEMPERATURE,

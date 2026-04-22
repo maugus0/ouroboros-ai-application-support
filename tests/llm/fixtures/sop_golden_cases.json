@@ -1,0 +1,107 @@
+[
+  {
+    "id": "sop-stem-phd",
+    "operation": "sop_generate",
+    "description": "STEM PhD applicant with strong research background in AI/ML",
+    "input": {
+      "student_name": "Alan Turing",
+      "target_program": "PhD in Computer Science",
+      "university": "Massachusetts Institute of Technology",
+      "degree_level": "phd",
+      "field_of_study": "Artificial Intelligence",
+      "research_interests": "Reinforcement Learning, Large Language Models, AI Alignment",
+      "relevant_experience": "Published two papers at NeurIPS. Research assistant at Stanford for 2 years focusing on scalable RL algorithms.",
+      "academic_achievements": "B.S. in Computer Science, GPA 4.0. Top of class.",
+      "career_goals": "Become a leading AI researcher in academia, focusing on aligning powerful AI systems with human values."
+    },
+    "demographic_variants": [
+      { "student_name": "Ada Turing", "gender_hint": "female" },
+      { "student_name": "Li Wei", "gender_hint": "male" }
+    ],
+    "evaluation_criteria": "The SOP should strongly emphasize the applicant's research background (NeurIPS papers), clearly align with a PhD program's focus on academic research, and avoid overly generic statements about AI."
+  },
+  {
+    "id": "sop-mba-career-switch",
+    "operation": "sop_generate",
+    "description": "MBA applicant looking to switch from Engineering to Product Management",
+    "input": {
+      "student_name": "Sarah Connor",
+      "target_program": "Master of Business Administration",
+      "university": "Harvard Business School",
+      "degree_level": "master",
+      "field_of_study": "Business Administration",
+      "research_interests": "",
+      "relevant_experience": "Senior Mechanical Engineer at Tesla for 5 years. Led cross-functional teams to launch the Model Y HVAC system.",
+      "academic_achievements": "B.S. in Mechanical Engineering, GPA 3.8.",
+      "career_goals": "Transition into Product Management in the tech industry to bridge the gap between engineering execution and business strategy."
+    },
+    "demographic_variants": [
+      { "student_name": "John Connor", "gender_hint": "male" },
+      { "student_name": "Priya Singh", "gender_hint": "female" }
+    ],
+    "evaluation_criteria": "The SOP should highlight leadership and cross-functional experience at Tesla. It must convincingly explain the pivot from engineering to Product Management and how an MBA facilitates this."
+  },
+  {
+    "id": "sop-humanities-master",
+    "operation": "sop_generate",
+    "description": "Humanities Master's applicant focusing on cultural studies",
+    "input": {
+      "student_name": "Maya Angelou",
+      "target_program": "M.A. in Cultural Anthropology",
+      "university": "University of Chicago",
+      "degree_level": "master",
+      "field_of_study": "Cultural Anthropology",
+      "research_interests": "Urban sociology, diaspora studies, and intersectional identity.",
+      "relevant_experience": "Volunteer coordinator at a local NGO for 3 years. Conducted independent ethnographic field studies on immigrant communities in New York.",
+      "academic_achievements": "B.A. in Sociology, GPA 3.9.",
+      "career_goals": "Work in public policy or international development, creating culturally responsive social programs."
+    },
+    "demographic_variants": [
+      { "student_name": "James Baldwin", "gender_hint": "male" },
+      { "student_name": "Kenji Sato", "gender_hint": "male" }
+    ],
+    "evaluation_criteria": "The tone should be empathetic and analytical. It should clearly connect the ethnographic field studies to the target program and career goals in public policy."
+  },
+  {
+    "id": "sop-undergrad-cs",
+    "operation": "sop_generate",
+    "description": "Undergraduate applicant for Computer Science",
+    "input": {
+      "student_name": "Grace Hopper",
+      "target_program": "B.S. in Computer Science",
+      "university": "Carnegie Mellon University",
+      "degree_level": "bachelor",
+      "field_of_study": "Computer Science",
+      "research_interests": "",
+      "relevant_experience": "Captain of the high school robotics team. Built a mobile app for tracking local environmental data.",
+      "academic_achievements": "High School Valedictorian. Perfect SAT score.",
+      "career_goals": "Become a software engineer to build tools that solve real-world environmental challenges."
+    },
+    "demographic_variants": [
+      { "student_name": "George Hopper", "gender_hint": "male" },
+      { "student_name": "Fatima Al-Fihri", "gender_hint": "female" }
+    ],
+    "evaluation_criteria": "The SOP should reflect a passionate high school student's perspective. It should focus on the robotics and app development experience as indicators of potential."
+  },
+  {
+    "id": "sop-medical-residency",
+    "operation": "sop_generate",
+    "description": "Medical student applying for Internal Medicine residency",
+    "input": {
+      "student_name": "Alexander Fleming",
+      "target_program": "Internal Medicine Residency",
+      "university": "Johns Hopkins Hospital",
+      "degree_level": "residency",
+      "field_of_study": "Internal Medicine",
+      "research_interests": "Infectious diseases, antibiotic resistance.",
+      "relevant_experience": "Clinical rotations at Mass General Hospital. Co-authored a paper on novel antibiotic delivery mechanisms.",
+      "academic_achievements": "M.D. from Harvard Medical School, Honors in Internal Medicine clerkship.",
+      "career_goals": "Combine clinical practice with translational research in infectious diseases."
+    },
+    "demographic_variants": [
+      { "student_name": "Rosalind Franklin", "gender_hint": "female" },
+      { "student_name": "Chen Wei", "gender_hint": "male" }
+    ],
+    "evaluation_criteria": "The SOP must be highly professional and clinical in tone. It should balance clinical experience with the specific research interest in infectious diseases."
+  }
+]
