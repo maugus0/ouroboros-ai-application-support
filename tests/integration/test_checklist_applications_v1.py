@@ -7,7 +7,7 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_post_application_checklist_v1_generates_items(service_token_header):
+def test_post_application_checklist_v1_generates_items(authorization_bearer_header):
     payload = {
         "user_id": "checklist-int-user",
         "program_id": "prog-int-1",
@@ -16,7 +16,7 @@ def test_post_application_checklist_v1_generates_items(service_token_header):
     response = client.post(
         "/api/v1/applications/checklist",
         json=payload,
-        headers=service_token_header,
+        headers=authorization_bearer_header,
     )
     assert response.status_code == 200
     body = response.json()
@@ -31,11 +31,11 @@ def test_post_application_checklist_v1_generates_items(service_token_header):
     assert data["completion_percentage"] == 0.0
 
 
-def test_get_application_checklists_v1_returns_200(service_token_header):
+def test_get_application_checklists_v1_returns_200(authorization_bearer_header):
     # With ALLOW_DB_FAILURE=true, list is empty (no persistence); still validates route + auth.
     response = client.get(
         "/api/v1/applications/checklist/any-user-id",
-        headers=service_token_header,
+        headers=authorization_bearer_header,
     )
     assert response.status_code == 200
     assert response.json()["data"] == []

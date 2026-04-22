@@ -10,7 +10,7 @@ SET @exists = (
 );
 SET @query = IF(
   @exists > 0,
-  'SELECT 1',
+  'DO 1',
   'ALTER TABLE generated_sops ADD COLUMN match_attribution_snapshot JSON NULL COMMENT ''Match scoring / attribution payload at generation time'' AFTER retrieved_reference_ids'
 );
 PREPARE stmt FROM @query;

@@ -3,11 +3,27 @@ set -e
 
 echo "Starting Application Support Agent..."
 
+PYTHON_BIN=""
+
 for VENV_DIR in ".venv" "venv" "env"; do
-    if [ -d "${VENV_DIR}" ] && [ -f "${VENV_DIR}/bin/activate" ]; then
+    if [ -d "${VENV_DIR}" ] && [ -f "${VENV_DIR}/bin/activate" ] && [ -x "${VENV_DIR}/bin/python" ]; then
         source "${VENV_DIR}/bin/activate"
+        PYTHON_BIN="${VENV_DIR}/bin/python"
         break
     fi
 done
 
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
+if [ -z "${PYTHON_BIN}" ]; then
+    PYTHON_BIN="$(command -v python3 || command -v python || true)"
+fi
+
+if [ -z "${PYTHON_BIN}" ]; then
+    echo "Python interpreter not found. Activate a virtual environment or install Python 3."
+    exit 1
+fi
+
+if [ "${RUN_STARTUP_SCRIPTS:-true}" = "true" ]; then
+    "${PYTHON_BIN}" scripts/run_migrations.py
+fi
+
+"${PYTHON_BIN}" -m uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload

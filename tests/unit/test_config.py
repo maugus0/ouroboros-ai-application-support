@@ -7,7 +7,6 @@ import os
 
 def test_settings_load():
     os.environ.setdefault("ALLOW_DB_FAILURE", "true")
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
 
     from app.config import settings
 
@@ -18,7 +17,6 @@ def test_settings_load():
 
 def test_settings_db_helpers():
     os.environ.setdefault("ALLOW_DB_FAILURE", "true")
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
 
     from app.config import settings
 
@@ -29,7 +27,6 @@ def test_settings_db_helpers():
 
 
 def test_sop_settings():
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
     from app.config import settings
 
     assert settings.SOP_MIN_WORDS == 500
@@ -38,16 +35,16 @@ def test_sop_settings():
 
 
 def test_security_settings():
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
     from app.config import settings
 
     assert settings.MAX_INPUT_LENGTH > 0
     assert isinstance(settings.ENABLE_PROMPT_INJECTION_DETECTION, bool)
     assert isinstance(settings.ENABLE_OUTPUT_VALIDATION, bool)
+    assert settings.INTERNAL_TOKEN_AUDIENCE == "ouroboros.application-support"
+    assert isinstance(settings.INTERNAL_TOKEN_VERIFY_ENABLED, bool)
 
 
 def test_allowed_extensions_list():
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
     from app.config import settings
 
     exts = settings.get_allowed_extensions_list()
@@ -56,9 +53,20 @@ def test_allowed_extensions_list():
 
 
 def test_allowed_extensions_list_normalizes(monkeypatch):
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
     from app.config import settings
 
     monkeypatch.setattr(settings, "ALLOWED_EXTENSIONS", " PDF , .DOCX ,, txt ")
     exts = settings.get_allowed_extensions_list()
     assert exts == [".pdf", ".docx", ".txt"]
+
+
+def test_internal_token_public_keys_rejects_blank_entries(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(
+        settings,
+        "INTERNAL_TOKEN_PUBLIC_KEYS",
+        '{" 0 ":" pem-value ", "blank-kid":"", "blank-pem":"   ", "":"missing-kid"}',
+    )
+
+    assert settings.get_internal_token_public_keys() == {"0": "pem-value"}

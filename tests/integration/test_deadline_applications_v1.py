@@ -7,16 +7,16 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_get_application_deadlines_v1_empty_with_allow_db_failure(service_token_header):
+def test_get_application_deadlines_v1_empty_with_allow_db_failure(authorization_bearer_header):
     response = client.get(
         "/api/v1/applications/deadlines/any-user-id",
-        headers=service_token_header,
+        headers=authorization_bearer_header,
     )
     assert response.status_code == 200
     assert response.json()["data"] == []
 
 
-def test_post_application_deadlines_sync_v1_reports_extracted(service_token_header):
+def test_post_application_deadlines_sync_v1_reports_extracted(authorization_bearer_header):
     payload = {
         "user_id": "deadline-sync-user",
         "programs": [
@@ -33,7 +33,7 @@ def test_post_application_deadlines_sync_v1_reports_extracted(service_token_head
     response = client.post(
         "/api/v1/applications/deadlines/sync",
         json=payload,
-        headers=service_token_header,
+        headers=authorization_bearer_header,
     )
     assert response.status_code == 200
     body = response.json()

@@ -359,6 +359,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Set up Python
+        if: env.SNYK_TOKEN != ''
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python dependencies for Snyk
+        if: env.SNYK_TOKEN != ''
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
       # No secret: job still succeeds; documents that dependency scanning is optional until SNYK_TOKEN is set.
       - name: Skip Snyk (no token)
         if: env.SNYK_TOKEN == ''
@@ -385,6 +399,7 @@ jobs:
           snyk auth "$SNYK_TOKEN"
           snyk test \
             --file=requirements.txt \
+            --command=python3 \
             --severity-threshold=high \
             --command=python3 \
             --sarif-file-output=snyk.sarif

@@ -120,14 +120,14 @@ def custom_openapi():
     )
     schema["info"]["x-logo"] = {"url": "https://ouroboros.ai/logo.png"}
 
-    # So Swagger UI "Authorize" can send X-Service-Token on Try it out requests.
+    # So Swagger UI "Authorize" can send Authorization: Bearer ... on Try it out requests.
     schema.setdefault("components", {})
     schema["components"].setdefault("securitySchemes", {})
-    schema["components"]["securitySchemes"]["ServiceToken"] = {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-Service-Token",
-        "description": "Same value as X_SERVICE_TOKEN in server .env",
+    schema["components"]["securitySchemes"]["InternalBearer"] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Short-lived internal JWT issued by orchestrator",
     }
     public_paths = {"/", "/health"}
     for path, path_item in schema.get("paths", {}).items():
@@ -137,7 +137,7 @@ def custom_openapi():
             op = path_item.get(method)
             if not isinstance(op, dict):
                 continue
-            op.setdefault("security", [{"ServiceToken": []}])
+            op.setdefault("security", [{"InternalBearer": []}])
 
     app.openapi_schema = schema
     return schema
