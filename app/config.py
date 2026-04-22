@@ -121,7 +121,11 @@ class Settings(BaseSettings):
             return {}
         if not isinstance(parsed, dict):
             return {}
-        return {str(kid): str(pem) for kid, pem in parsed.items() if kid and pem}
+        return {
+            str(kid).strip(): str(pem).strip()
+            for kid, pem in parsed.items()
+            if kid is not None and str(kid).strip() and pem is not None and str(pem).strip()
+        }
 
 
 settings = Settings()

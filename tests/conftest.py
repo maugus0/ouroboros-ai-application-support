@@ -29,7 +29,7 @@ def mock_settings():
 
 
 @pytest.fixture
-def service_token_header():
+def authorization_bearer_header():
     """Return an orchestrator-style internal bearer token for tests."""
     now = datetime.now(timezone.utc)
     token = jwt.encode(

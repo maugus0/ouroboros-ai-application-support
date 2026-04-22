@@ -58,3 +58,15 @@ def test_allowed_extensions_list_normalizes(monkeypatch):
     monkeypatch.setattr(settings, "ALLOWED_EXTENSIONS", " PDF , .DOCX ,, txt ")
     exts = settings.get_allowed_extensions_list()
     assert exts == [".pdf", ".docx", ".txt"]
+
+
+def test_internal_token_public_keys_rejects_blank_entries(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(
+        settings,
+        "INTERNAL_TOKEN_PUBLIC_KEYS",
+        '{" 0 ":" pem-value ", "blank-kid":"", "blank-pem":"   ", "":"missing-kid"}',
+    )
+
+    assert settings.get_internal_token_public_keys() == {"0": "pem-value"}

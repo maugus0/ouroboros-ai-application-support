@@ -4,11 +4,14 @@ import json
 from datetime import datetime, timedelta, timezone
 
 import jwt
+import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.middleware.service_auth import get_optional_request_user_id
 
 INTERNAL_TEST_KEY = "internal-test-signing-key-with-32-bytes"
 
@@ -145,3 +148,23 @@ def test_internal_bearer_token_uses_configured_public_keys_by_kid(monkeypatch):
     )
 
     assert response.status_code not in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_optional_request_user_id_rejects_header_subject_mismatch(monkeypatch):
+    _configure_hs256(monkeypatch)
+    authorization = _build_hs256_token()
+    request = Request(
+        {
+            "type": "http",
+            "headers": [
+                (b"authorization", authorization.encode("utf-8")),
+                (b"x-user-id", b"different-user"),
+            ],
+        }
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_optional_request_user_id(request)
+
+    assert exc_info.value.status_code == 403

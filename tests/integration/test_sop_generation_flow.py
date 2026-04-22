@@ -19,10 +19,10 @@ def _sample_sop_payload(mock_student_profile, mock_target_program, mock_match_at
 
 
 def test_post_sop_generate_returns_success(
-    service_token_header, mock_student_profile, mock_target_program, mock_match_attribution
+    authorization_bearer_header, mock_student_profile, mock_target_program, mock_match_attribution
 ):
     payload = _sample_sop_payload(mock_student_profile, mock_target_program, mock_match_attribution)
-    response = client.post("/sop/generate", json=payload, headers=service_token_header)
+    response = client.post("/sop/generate", json=payload, headers=authorization_bearer_header)
     assert response.status_code == 200
     body = response.json()
     assert body["success"] is True
@@ -33,10 +33,10 @@ def test_post_sop_generate_returns_success(
 
 
 def test_post_api_v1_applications_generate_sop(
-    service_token_header, mock_student_profile, mock_target_program, mock_match_attribution
+    authorization_bearer_header, mock_student_profile, mock_target_program, mock_match_attribution
 ):
     payload = _sample_sop_payload(mock_student_profile, mock_target_program, mock_match_attribution)
-    response = client.post("/api/v1/applications/generate-sop", json=payload, headers=service_token_header)
+    response = client.post("/api/v1/applications/generate-sop", json=payload, headers=authorization_bearer_header)
     assert response.status_code == 200
     body = response.json()
     assert body["success"] is True
@@ -44,16 +44,16 @@ def test_post_api_v1_applications_generate_sop(
     assert body["data"].get("quality_score") is not None
 
 
-def test_generate_sop_rejects_empty_program_context(service_token_header):
+def test_generate_sop_rejects_empty_program_context(authorization_bearer_header):
     response = client.post(
         "/api/v1/applications/generate-sop",
         json={"user_id": "u1", "target_program": {}},
-        headers=service_token_header,
+        headers=authorization_bearer_header,
     )
     assert response.status_code == 422
 
 
-def test_get_sop_not_found(service_token_header):
-    response = client.get("/sop/does-not-exist", headers=service_token_header)
+def test_get_sop_not_found(authorization_bearer_header):
+    response = client.get("/sop/does-not-exist", headers=authorization_bearer_header)
     # Without a live DB pool (ALLOW_DB_FAILURE=true in CI), repository access raises RuntimeError -> 503.
     assert response.status_code in (404, 503)

@@ -26,7 +26,7 @@ async def require_service_token(request: Request) -> None:
     claims = await _decode_internal_service_token(request.headers.get("Authorization"))
     if claims is not None:
         return
-    raise HTTPException(status_code=401, detail="Internal bearer token required")
+    raise HTTPException(status_code=401, detail="Internal bearer token missing or invalid")
 
 
 async def _decode_internal_service_token(authorization: str | None) -> dict | None:
@@ -188,7 +188,10 @@ async def get_request_user_id(request: Request) -> str:
 async def get_optional_request_user_id(request: Request) -> str | None:
     """Resolve request user id when available; returns None when absent."""
     user_id = request.headers.get("X-User-ID")
-    if user_id and user_id.strip():
-        return user_id.strip()
+    user_id_from_header = user_id.strip() if user_id and user_id.strip() else None
 
-    return await _get_user_id_from_authorization_header(request.headers.get("Authorization"))
+    user_id_from_jwt = await _get_user_id_from_authorization_header(request.headers.get("Authorization"))
+    if user_id_from_header and user_id_from_jwt and user_id_from_header != user_id_from_jwt:
+        raise HTTPException(status_code=403, detail="X-User-ID does not match token subject")
+
+    return user_id_from_jwt or user_id_from_header

@@ -63,11 +63,11 @@ def test_internal_bearer_token_rejects_wrong_audience():
     assert response.status_code == 401
 
 
-def test_valid_internal_bearer_token_returns_non_401(service_token_header):
+def test_valid_internal_bearer_token_returns_non_401(authorization_bearer_header):
     response = client.post(
         "/sop/generate",
         json={"user_id": "test"},
-        headers=service_token_header,
+        headers=authorization_bearer_header,
     )
     assert response.status_code not in (401, 403)
 
