@@ -21,6 +21,9 @@ if str(ROOT_DIR) not in sys.path:
 from app.llm.openai_client import call_openai
 from app.llm.prompts import get_cover_letter_prompt, get_sop_outline_prompt
 
+DEFAULT_DRY_RUN_BIAS_SCORES = [7.0, 7.5]
+JUDGE_TEMPERATURE = 0.0
+
 
 def compute_prompt_version(prompts_dir: Path) -> str:
     """Computes a deterministic version from the prompt template files."""
@@ -40,6 +43,28 @@ def compute_prompt_version(prompts_dir: Path) -> str:
     except Exception:
         return "unknown"
     return digest.hexdigest()[:12]
+
+
+def get_dry_run_bias_score(variant_index: int) -> float:
+    """Return deterministic dry-run bias scores, optionally overridden for branch testing."""
+    raw_scores = os.getenv("EVAL_DRY_RUN_BIAS_SCORES", "")
+    if raw_scores.strip():
+        scores = [float(score.strip()) for score in raw_scores.split(",") if score.strip()]
+        if not scores:
+            raise ValueError("EVAL_DRY_RUN_BIAS_SCORES must contain at least one numeric score")
+    else:
+        scores = DEFAULT_DRY_RUN_BIAS_SCORES
+
+    return scores[min(variant_index, len(scores) - 1)]
+
+
+def classify_bias_gap(bias_gap: float, bias_threshold: float, bias_hard_limit: float) -> tuple[str, bool]:
+    """Classify a bias gap and whether it should fail the eval run."""
+    if bias_gap > bias_hard_limit:
+        return "hard_fail", True
+    if bias_gap > bias_threshold:
+        return "warning", False
+    return "ok", False
 
 
 def get_prompt_for_operation(operation: str, context: Dict[str, Any]) -> str:
@@ -124,7 +149,7 @@ async def judge_output(
                 system_message=judge_system_prompt,
                 model=model_override,
                 max_tokens=500,
-                temperature=0.7,
+                temperature=JUDGE_TEMPERATURE,
                 response_format="json",
             )
             content_str = raw_response.get("content", "{}")
@@ -264,7 +289,7 @@ async def run_evals(dry_run: bool):
 
         for idx, variant in enumerate(variants):
             if dry_run:
-                v_score = 7.0 if idx == 0 else 7.5
+                v_score = get_dry_run_bias_score(idx)
                 v_reason = "Mock bias variant."
             else:
                 # Merge variant into input
@@ -284,13 +309,11 @@ async def run_evals(dry_run: bool):
         if bias_gap > bias_report["max_bias_gap"]:
             bias_report["max_bias_gap"] = bias_gap
 
-        status = "ok"
-        if bias_gap > bias_hard_limit:
-            status = "hard_fail"
+        status, hard_failed_case = classify_bias_gap(bias_gap, bias_threshold, bias_hard_limit)
+        if hard_failed_case:
             has_hard_fail = True
             print(f"  -> ❌ HARD FAIL: Bias gap {bias_gap} exceeds limit {bias_hard_limit}!")
-        elif bias_gap > bias_threshold:
-            status = "warning"
+        elif status == "warning":
             print(f"  -> ⚠️ WARNING: Bias gap {bias_gap} exceeds threshold {bias_threshold}.")
         else:
             print(f"  -> ✅ OK: Bias gap {bias_gap}.")

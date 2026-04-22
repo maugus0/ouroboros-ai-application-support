@@ -164,11 +164,11 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Run prompt lint tests
+      - name: Run LLMOps prompt tests
         env:
           ALLOW_DB_FAILURE: "true"
           USE_MOCK_DATA: "true"
-        run: pytest tests/llm/test_prompt_lint.py -v --tb=short
+        run: pytest tests/llm -v --tb=short
 
   prompt-diff-alert:
     name: Prompt Change Detector

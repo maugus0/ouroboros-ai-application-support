@@ -15,6 +15,38 @@ PATTERNS: Dict[str, re.Pattern] = {
     "US SSN": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
 }
 
+# Fixture IDs and postal-like values are often synthetic standalone numbers.
+# Keep this narrow so sensitive fields such as national_id/student_id still fail the guard.
+ALLOWED_VN_ID_CONTEXT_KEYS = {
+    "case_id",
+    "id",
+    "program_id",
+    "source_id",
+    "target_id",
+    "scholarship_id",
+    "user_id",
+    "postal_code",
+    "postcode",
+    "zip",
+    "zip_code",
+}
+
+JSON_KEY_PATTERN = re.compile(r'"(?P<key>[^"]+)"\s*:\s*')
+
+
+def _json_key_for_line(line: str) -> str | None:
+    match = JSON_KEY_PATTERN.search(line)
+    if not match:
+        return None
+    return match.group("key")
+
+
+def _is_allowed_finding(pattern_name: str, line: str) -> bool:
+    if pattern_name != "VN CCCD/CMND":
+        return False
+    key = _json_key_for_line(line)
+    return key in ALLOWED_VN_ID_CONTEXT_KEYS
+
 
 def scan_file(file_path: str) -> Tuple[List[Tuple[int, str]], List[str]]:
     """Scans a single file for PII patterns. Returns findings and any read/decode errors."""
@@ -25,6 +57,8 @@ def scan_file(file_path: str) -> Tuple[List[Tuple[int, str]], List[str]]:
             for line_num, line in enumerate(f, 1):
                 for pattern_name, pattern in PATTERNS.items():
                     if pattern.search(line):
+                        if _is_allowed_finding(pattern_name, line):
+                            continue
                         findings.append((line_num, pattern_name))
     except (OSError, UnicodeDecodeError) as e:
         errors.append(f"Error reading {file_path}: {e}")
