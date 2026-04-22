@@ -131,25 +131,22 @@ async def _resolve_internal_token_verification_key(token: str) -> object | str |
 
     kid = token_header.get("kid")
     algorithm = str(settings.INTERNAL_TOKEN_SIGNING_ALGORITHM or "").upper()
+    resolved_key: object | str | None = None
 
     if algorithm.startswith("HS"):
         if settings.INTERNAL_TOKEN_PUBLIC_KEY:
-            return _normalize_key(settings.INTERNAL_TOKEN_PUBLIC_KEY)
-        return None
+            resolved_key = _normalize_key(settings.INTERNAL_TOKEN_PUBLIC_KEY)
+    else:
+        configured_kid_key = _resolve_configured_public_key_by_kid(str(kid) if kid else None)
+        if configured_kid_key:
+            resolved_key = configured_kid_key
+        elif kid and settings.INTERNAL_TOKEN_JWKS_URL:
+            resolved_key = await _resolve_jwks_key(settings.INTERNAL_TOKEN_JWKS_URL, str(kid))
 
-    configured_kid_key = _resolve_configured_public_key_by_kid(str(kid) if kid else None)
-    if configured_kid_key:
-        return configured_kid_key
+        if resolved_key is None and settings.INTERNAL_TOKEN_PUBLIC_KEY:
+            resolved_key = _normalize_key(settings.INTERNAL_TOKEN_PUBLIC_KEY)
 
-    if kid and settings.INTERNAL_TOKEN_JWKS_URL:
-        jwks_key = await _resolve_jwks_key(settings.INTERNAL_TOKEN_JWKS_URL, str(kid))
-        if jwks_key is not None:
-            return jwks_key
-
-    if settings.INTERNAL_TOKEN_PUBLIC_KEY:
-        return _normalize_key(settings.INTERNAL_TOKEN_PUBLIC_KEY)
-
-    return None
+    return resolved_key
 
 
 async def _get_user_id_from_authorization_header(authorization: str | None) -> str | None:
