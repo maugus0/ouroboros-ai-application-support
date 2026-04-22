@@ -1,33 +1,6 @@
-"""Inter-service authentication via X-Service-Token header."""
+"""Security helpers.
 
-from fastapi import HTTPException, Request, status
-
-from app.config import settings
-from app.core.logging import get_logger
-
-logger = get_logger(__name__)
-
-
-def validate_service_token(request: Request) -> None:
-    """Validate X-Service-Token header from the orchestrator.
-
-    Raises:
-        HTTPException: If token is missing or invalid.
-    """
-    # Default "" so .strip() is safe when the header is omitted (get returns None without default).
-    token = request.headers.get("X-Service-Token", "").strip()
-
-    if not token:
-        logger.warning("missing_service_token", path=request.url.path)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="X-Service-Token header required",
-        )
-
-    expected = settings.X_SERVICE_TOKEN.strip()
-    if token != expected:
-        logger.warning("invalid_service_token", path=request.url.path)
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid service token",
-        )
+Legacy shared-secret X-Service-Token validation has been removed. Protected
+routes use app.middleware.service_auth.require_service_token, which validates
+short-lived internal bearer tokens issued by orchestrator.
+"""

@@ -5,9 +5,11 @@ from fastapi import APIRouter, Depends, Query
 from app.middleware.service_auth import require_service_token
 from app.models.checklist_models import ChecklistCreateRequest, ChecklistItemUpdate, ChecklistResponse
 from app.models.common_models import StandardResponse
+from app.models.cover_letter_models import CoverLetterGenerateRequest, CoverLetterResponse
 from app.models.deadline_models import DeadlineSyncRequest, DeadlineSyncResponse, DeadlineTimelineEntry
 from app.models.sop_models import SOPGenerateRequest, SOPResponse
 from app.services.checklist_service import ChecklistService
+from app.services.cover_letter_service import CoverLetterService
 from app.services.deadline_service import DeadlineService
 from app.services.sop_service import SOPService
 
@@ -27,6 +29,14 @@ async def generate_sop_v1(request: SOPGenerateRequest):
     service = SOPService()
     data = await service.generate(request)
     return StandardResponse(success=True, message="SOP generated", data=data)
+
+
+@router.post("/generate-cover-letter", response_model=StandardResponse[CoverLetterResponse])
+async def generate_cover_letter_v1(request: CoverLetterGenerateRequest):
+    """Generate a cover letter under the versioned orchestrator-facing API prefix."""
+    service = CoverLetterService()
+    data = await service.generate(request)
+    return StandardResponse(success=True, message="Cover letter generated", data=data)
 
 
 @router.post("/checklist", response_model=StandardResponse[ChecklistResponse])
