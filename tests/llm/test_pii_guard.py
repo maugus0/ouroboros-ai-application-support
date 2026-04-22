@@ -18,8 +18,8 @@ def test_pii_guard_ignores_synthetic_numeric_fixture_ids(tmp_path):
 
     findings, errors = scan_file(str(fixture))
 
-    assert errors == []
-    assert findings == []
+    assert not errors
+    assert not findings
 
 
 def test_pii_guard_still_flags_vn_national_id_in_sensitive_fields(tmp_path):
@@ -36,5 +36,5 @@ def test_pii_guard_still_flags_vn_national_id_in_sensitive_fields(tmp_path):
 
     findings, errors = scan_file(str(fixture))
 
-    assert errors == []
+    assert not errors
     assert findings == [(4, "VN CCCD/CMND")]
