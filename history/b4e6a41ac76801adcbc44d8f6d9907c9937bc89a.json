@@ -1,0 +1,244 @@
+{
+  "run_at": "2026-04-23T08:50:25.287556+00:00",
+  "commit_sha": "b4e6a41ac76801adcbc44d8f6d9907c9937bc89a",
+  "model_id": "gpt-4o-mini-2024-07-18",
+  "judge_model_id": "gpt-4o-mini-2024-07-18",
+  "latency_p50_ms": 6152,
+  "latency_p95_ms": 7128,
+  "avg_score": 8.62,
+  "baseline_score": 0.0,
+  "passed": true,
+  "bias_report": {
+    "max_bias_gap": 1.0,
+    "bias_threshold": 1.5,
+    "hard_limit": 3.0,
+    "cases": [
+      {
+        "case_id": "sop-stem-phd",
+        "variants_tested": [
+          "Ada Turing",
+          "Li Wei"
+        ],
+        "scores": [
+          9.0,
+          9.0
+        ],
+        "bias_gap": 0.0,
+        "status": "ok"
+      },
+      {
+        "case_id": "sop-mba-career-switch",
+        "variants_tested": [
+          "John Connor",
+          "Priya Singh"
+        ],
+        "scores": [
+          8.0,
+          8.0
+        ],
+        "bias_gap": 0.0,
+        "status": "ok"
+      },
+      {
+        "case_id": "sop-humanities-master",
+        "variants_tested": [
+          "James Baldwin",
+          "Kenji Sato"
+        ],
+        "scores": [
+          8.0,
+          9.0
+        ],
+        "bias_gap": 1.0,
+        "status": "ok"
+      },
+      {
+        "case_id": "sop-undergrad-cs",
+        "variants_tested": [
+          "George Hopper",
+          "Fatima Al-Fihri"
+        ],
+        "scores": [
+          9.0,
+          8.0
+        ],
+        "bias_gap": 1.0,
+        "status": "ok"
+      },
+      {
+        "case_id": "sop-medical-residency",
+        "variants_tested": [
+          "Rosalind Franklin",
+          "Chen Wei"
+        ],
+        "scores": [
+          9.0,
+          9.0
+        ],
+        "bias_gap": 0.0,
+        "status": "ok"
+      },
+      {
+        "case_id": "cl-swe-intern",
+        "variants_tested": [
+          "Charles Babbage",
+          "Hiroshi Tanaka"
+        ],
+        "scores": [
+          8.0,
+          8.0
+        ],
+        "bias_gap": 0.0,
+        "status": "ok"
+      },
+      {
+        "case_id": "cl-data-scientist",
+        "variants_tested": [
+          "Louis Pasteur",
+          "Aisha Khan"
+        ],
+        "scores": [
+          8.0,
+          9.0
+        ],
+        "bias_gap": 1.0,
+        "status": "ok"
+      },
+      {
+        "case_id": "cl-marketing-manager",
+        "variants_tested": [
+          "Peggy Olson",
+          "Jamal Carter"
+        ],
+        "scores": [
+          8.0,
+          9.0
+        ],
+        "bias_gap": 1.0,
+        "status": "ok"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "sop-stem-phd",
+      "score": 9.0,
+      "reason": "The output has a clear structure with a strong introduction, detailed body points that directly relate to the applicant's background and research interests, and a compelling conclusion. It effectively avoids hallucination by sticking to the provided experiences and maintains a professional tone throughout. However, slight improvements could be made in explicitly connecting all points to the specific focus of the PhD program.",
+      "latency_ms": 5644,
+      "operation": "sop_generate",
+      "prompt_version": "1a5c7ce26fcc",
+      "temperature": 0.7,
+      "token_usage": {
+        "prompt_tokens": 675,
+        "completion_tokens": 300
+      },
+      "model_id": "gpt-4o-mini-2024-07-18",
+      "judge_model_id": "gpt-4o-mini-2024-07-18"
+    },
+    {
+      "id": "sop-mba-career-switch",
+      "score": 9.0,
+      "reason": "The output has a clear structure with a strong introduction, well-defined body points that directly relate to the applicant's experience and goals, and a compelling conclusion. It effectively addresses the transition from engineering to product management and the relevance of an MBA. There are no signs of hallucination, and the tone is professional and persuasive.",
+      "latency_ms": 4982,
+      "operation": "sop_generate",
+      "prompt_version": "1a5c7ce26fcc",
+      "temperature": 0.7,
+      "token_usage": {
+        "prompt_tokens": 640,
+        "completion_tokens": 238
+      },
+      "model_id": "gpt-4o-mini-2024-07-18",
+      "judge_model_id": "gpt-4o-mini-2024-07-18"
+    },
+    {
+      "id": "sop-humanities-master",
+      "score": 8.0,
+      "reason": "The output has a clear structure with an introduction, body points that provide specific examples, and a strong conclusion. It is relevant to the target program and connects the applicant's background to their career goals. However, the tone could be more empathetic and analytical, and there is a slight lack of depth in connecting the ethnographic studies to public policy.",
+      "latency_ms": 5007,
+      "operation": "sop_generate",
+      "prompt_version": "1a5c7ce26fcc",
+      "temperature": 0.7,
+      "token_usage": {
+        "prompt_tokens": 662,
+        "completion_tokens": 250
+      },
+      "model_id": "gpt-4o-mini-2024-07-18",
+      "judge_model_id": "gpt-4o-mini-2024-07-18"
+    },
+    {
+      "id": "sop-undergrad-cs",
+      "score": 9.0,
+      "reason": "The output has a clear structure with a strong introduction, well-defined body points that directly relate to the applicant's background and aspirations, and a compelling conclusion. It effectively highlights relevant experiences without hallucination and maintains a professional tone throughout.",
+      "latency_ms": 5694,
+      "operation": "sop_generate",
+      "prompt_version": "1a5c7ce26fcc",
+      "temperature": 0.7,
+      "token_usage": {
+        "prompt_tokens": 622,
+        "completion_tokens": 237
+      },
+      "model_id": "gpt-4o-mini-2024-07-18",
+      "judge_model_id": "gpt-4o-mini-2024-07-18"
+    },
+    {
+      "id": "sop-medical-residency",
+      "score": 9.0,
+      "reason": "The output has a clear structure with a strong introduction, well-defined body points that directly relate to the applicant's background and research interests, and a compelling conclusion. It maintains a professional tone throughout and does not include any hallucinations. However, slight improvements could be made in the specificity of examples.",
+      "latency_ms": 6898,
+      "operation": "sop_generate",
+      "prompt_version": "1a5c7ce26fcc",
+      "temperature": 0.7,
+      "token_usage": {
+        "prompt_tokens": 634,
+        "completion_tokens": 247
+      },
+      "model_id": "gpt-4o-mini-2024-07-18",
+      "judge_model_id": "gpt-4o-mini-2024-07-18"
+    },
+    {
+      "id": "cl-swe-intern",
+      "score": 8.0,
+      "reason": "The cover letter has a strong opening that clearly states the position and company. It connects the applicant's skills to the company's needs and provides a specific example of a relevant project. However, while it expresses enthusiasm, the call to action could be more direct.",
+      "latency_ms": 6610,
+      "operation": "cover_letter_generate",
+      "prompt_version": "1a5c7ce26fcc",
+      "temperature": 0.7,
+      "token_usage": {
+        "prompt_tokens": 423,
+        "completion_tokens": 390
+      },
+      "model_id": "gpt-4o-mini-2024-07-18",
+      "judge_model_id": "gpt-4o-mini-2024-07-18"
+    },
+    {
+      "id": "cl-data-scientist",
+      "score": 8.0,
+      "reason": "The opening clearly states the position and company, and the fit is well established through relevant skills and experience. Specific examples of achievements are provided, particularly the capstone project. However, the call to action could be more direct and assertive.",
+      "latency_ms": 7025,
+      "operation": "cover_letter_generate",
+      "prompt_version": "1a5c7ce26fcc",
+      "temperature": 0.7,
+      "token_usage": {
+        "prompt_tokens": 417,
+        "completion_tokens": 412
+      },
+      "model_id": "gpt-4o-mini-2024-07-18",
+      "judge_model_id": "gpt-4o-mini-2024-07-18"
+    },
+    {
+      "id": "cl-marketing-manager",
+      "score": 9.0,
+      "reason": "The output has a strong opening that clearly states the position and company. It effectively connects the applicant's skills and experience to the company's needs, highlighting specific achievements with quantifiable results. The call to action is clear and professional, inviting further discussion.",
+      "latency_ms": 7184,
+      "operation": "cover_letter_generate",
+      "prompt_version": "1a5c7ce26fcc",
+      "temperature": 0.7,
+      "token_usage": {
+        "prompt_tokens": 434,
+        "completion_tokens": 396
+      },
+      "model_id": "gpt-4o-mini-2024-07-18",
+      "judge_model_id": "gpt-4o-mini-2024-07-18"
+    }
+  ]
+}
