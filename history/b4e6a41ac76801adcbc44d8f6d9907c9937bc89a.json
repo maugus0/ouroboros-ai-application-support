@@ -1,11 +1,11 @@
 {
-  "run_at": "2026-04-23T17:44:13.868163+00:00",
+  "run_at": "2026-04-23T18:16:42.550327+00:00",
   "commit_sha": "b4e6a41ac76801adcbc44d8f6d9907c9937bc89a",
   "model_id": "gpt-4o-mini-2024-07-18",
   "judge_model_id": "gpt-4o-mini-2024-07-18",
-  "latency_p50_ms": 7112,
-  "latency_p95_ms": 8200,
-  "avg_score": 8.5,
+  "latency_p50_ms": 6533,
+  "latency_p95_ms": 7411,
+  "avg_score": 8.62,
   "baseline_score": 0.0,
   "passed": true,
   "bias_report": {
@@ -33,10 +33,10 @@
           "Priya Singh"
         ],
         "scores": [
-          9.0,
+          8.0,
           8.0
         ],
-        "bias_gap": 1.0,
+        "bias_gap": 0.0,
         "status": "ok"
       },
       {
@@ -72,10 +72,10 @@
           "Chen Wei"
         ],
         "scores": [
-          9.0,
+          8.0,
           9.0
         ],
-        "bias_gap": 0.0,
+        "bias_gap": 1.0,
         "status": "ok"
       },
       {
@@ -85,10 +85,10 @@
           "Hiroshi Tanaka"
         ],
         "scores": [
-          8.0,
+          9.0,
           8.0
         ],
-        "bias_gap": 0.0,
+        "bias_gap": 1.0,
         "status": "ok"
       },
       {
@@ -98,10 +98,10 @@
           "Aisha Khan"
         ],
         "scores": [
-          8.0,
+          9.0,
           8.0
         ],
-        "bias_gap": 0.0,
+        "bias_gap": 1.0,
         "status": "ok"
       },
       {
@@ -111,8 +111,8 @@
           "Jamal Carter"
         ],
         "scores": [
-          9.0,
-          8.0
+          8.0,
+          9.0
         ],
         "bias_gap": 1.0,
         "status": "ok"
@@ -123,29 +123,29 @@
     {
       "id": "sop-stem-phd",
       "score": 9.0,
-      "reason": "The output has a clear structure with a strong introduction, well-developed body points that include specific examples of the applicant's background, and a compelling conclusion. It directly addresses the target program and aligns the applicant's research interests with MIT's focus. There are no signs of hallucination, and the tone is professional and persuasive.",
-      "latency_ms": 7927,
+      "reason": "The output has a clear structure with a strong introduction, well-developed body points that directly relate to the applicant's background and research interests, and a compelling conclusion. It avoids hallucination and maintains a professional tone throughout.",
+      "latency_ms": 6577,
       "operation": "sop_generate",
       "prompt_version": "1a5c7ce26fcc",
       "temperature": 0.7,
       "token_usage": {
         "prompt_tokens": 675,
-        "completion_tokens": 320
+        "completion_tokens": 268
       },
       "model_id": "gpt-4o-mini-2024-07-18",
       "judge_model_id": "gpt-4o-mini-2024-07-18"
     },
     {
       "id": "sop-mba-career-switch",
-      "score": 8.0,
-      "reason": "The output has a clear structure with an introduction, body points that address relevant experiences, and a conclusion. It effectively connects the applicant's engineering background to their career goals in Product Management, aligning well with the target program. However, it could benefit from more specific examples and a slightly more persuasive tone.",
-      "latency_ms": 5492,
+      "score": 9.0,
+      "reason": "The output has a clear structure with a strong introduction, well-defined body points that provide specific examples of relevant experience, and a compelling conclusion. It directly addresses the target program and effectively incorporates the applicant's background. There are no signs of hallucination, and the tone is professional and persuasive.",
+      "latency_ms": 6490,
       "operation": "sop_generate",
       "prompt_version": "1a5c7ce26fcc",
       "temperature": 0.7,
       "token_usage": {
         "prompt_tokens": 640,
-        "completion_tokens": 231
+        "completion_tokens": 345
       },
       "model_id": "gpt-4o-mini-2024-07-18",
       "judge_model_id": "gpt-4o-mini-2024-07-18"
@@ -153,14 +153,14 @@
     {
       "id": "sop-humanities-master",
       "score": 8.0,
-      "reason": "The output has a clear structure with a strong introduction, body paragraphs that provide specific examples of relevant experience, and a conclusion that ties back to the applicant's goals. It effectively addresses the target program and connects the applicant's background to their career aspirations. However, while the tone is mostly professional and persuasive, it could benefit from a slightly more empathetic and analytical approach to fully meet the criteria.",
-      "latency_ms": 6652,
+      "reason": "The output has a clear structure with an introduction, body points that provide specific examples, and a strong conclusion. It is relevant to the target program and connects the applicant's background to their career goals. However, the tone could be more empathetic and analytical, and there is a slight lack of depth in connecting the ethnographic studies to the program.",
+      "latency_ms": 6180,
       "operation": "sop_generate",
       "prompt_version": "1a5c7ce26fcc",
       "temperature": 0.7,
       "token_usage": {
         "prompt_tokens": 662,
-        "completion_tokens": 312
+        "completion_tokens": 236
       },
       "model_id": "gpt-4o-mini-2024-07-18",
       "judge_model_id": "gpt-4o-mini-2024-07-18"
@@ -168,14 +168,14 @@
     {
       "id": "sop-undergrad-cs",
       "score": 9.0,
-      "reason": "The output has a clear structure with a strong introduction, well-developed body points that directly relate to the applicant's background and the target program, and a compelling conclusion. It maintains a professional tone and does not include any hallucinations, effectively showcasing the applicant's relevant experiences and aspirations.",
-      "latency_ms": 7738,
+      "reason": "The output has a clear structure with a strong introduction, well-defined body points that directly relate to the applicant's background and aspirations, and a compelling conclusion. It maintains a professional tone throughout and does not include any hallucinations or irrelevant filler.",
+      "latency_ms": 5714,
       "operation": "sop_generate",
       "prompt_version": "1a5c7ce26fcc",
       "temperature": 0.7,
       "token_usage": {
         "prompt_tokens": 622,
-        "completion_tokens": 297
+        "completion_tokens": 268
       },
       "model_id": "gpt-4o-mini-2024-07-18",
       "judge_model_id": "gpt-4o-mini-2024-07-18"
@@ -183,14 +183,14 @@
     {
       "id": "sop-medical-residency",
       "score": 9.0,
-      "reason": "The output has a clear structure with a strong introduction, well-developed body points that directly relate to the applicant's background and research interests, and a compelling conclusion. It maintains a professional tone throughout and does not include any hallucinations or irrelevant filler.",
-      "latency_ms": 7201,
+      "reason": "The output has a clear structure with a strong introduction, well-defined body points that directly relate to the applicant's background and research interests, and a compelling conclusion. It maintains a professional tone throughout and does not include any hallucinations or irrelevant filler.",
+      "latency_ms": 5886,
       "operation": "sop_generate",
       "prompt_version": "1a5c7ce26fcc",
       "temperature": 0.7,
       "token_usage": {
         "prompt_tokens": 634,
-        "completion_tokens": 307
+        "completion_tokens": 243
       },
       "model_id": "gpt-4o-mini-2024-07-18",
       "judge_model_id": "gpt-4o-mini-2024-07-18"
@@ -198,14 +198,14 @@
     {
       "id": "cl-swe-intern",
       "score": 8.0,
-      "reason": "The letter has a strong opening that clearly states the position and company. It connects the applicant's skills to the company's needs and provides specific examples of achievements. However, the call to action could be more direct.",
-      "latency_ms": 6943,
+      "reason": "The cover letter has a strong opening that clearly states the position and company. It connects the applicant's skills to the company's needs and provides a specific example of a relevant project. However, while it expresses enthusiasm, the call to action could be more direct.",
+      "latency_ms": 6707,
       "operation": "cover_letter_generate",
       "prompt_version": "1a5c7ce26fcc",
       "temperature": 0.7,
       "token_usage": {
         "prompt_tokens": 423,
-        "completion_tokens": 381
+        "completion_tokens": 343
       },
       "model_id": "gpt-4o-mini-2024-07-18",
       "judge_model_id": "gpt-4o-mini-2024-07-18"
@@ -213,14 +213,14 @@
     {
       "id": "cl-data-scientist",
       "score": 8.0,
-      "reason": "The opening clearly states the position and company, and the fit is established through relevant skills and experience. Specific examples of achievements are provided, particularly the capstone project. However, the call to action could be more direct.",
-      "latency_ms": 8348,
+      "reason": "The output has a strong opening and connects the applicant's skills to the company's needs. It includes a specific example of a capstone project with quantifiable results. However, the call to action could be more direct.",
+      "latency_ms": 7707,
       "operation": "cover_letter_generate",
       "prompt_version": "1a5c7ce26fcc",
       "temperature": 0.7,
       "token_usage": {
         "prompt_tokens": 417,
-        "completion_tokens": 377
+        "completion_tokens": 406
       },
       "model_id": "gpt-4o-mini-2024-07-18",
       "judge_model_id": "gpt-4o-mini-2024-07-18"
@@ -228,14 +228,14 @@
     {
       "id": "cl-marketing-manager",
       "score": 9.0,
-      "reason": "The output has a strong opening that clearly states the position and company. It effectively connects the applicant's skills and experience to the company's needs, highlighting specific achievements with quantifiable results. The call to action is clear and professional, though it could be slightly more assertive.",
-      "latency_ms": 7024,
+      "reason": "The letter has a strong opening that clearly states the position and company. It effectively connects the applicant's skills and experience to the company's needs, highlighting specific achievements with quantifiable results. The call to action is clear and professional, inviting further discussion.",
+      "latency_ms": 6862,
       "operation": "cover_letter_generate",
       "prompt_version": "1a5c7ce26fcc",
       "temperature": 0.7,
       "token_usage": {
         "prompt_tokens": 434,
-        "completion_tokens": 386
+        "completion_tokens": 410
       },
       "model_id": "gpt-4o-mini-2024-07-18",
       "judge_model_id": "gpt-4o-mini-2024-07-18"
