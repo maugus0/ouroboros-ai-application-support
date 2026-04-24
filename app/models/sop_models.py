@@ -58,6 +58,7 @@ class SOPResponse(BaseModel):
     llm_model_used: str | None = None
     llm_fallback_used: bool = False
     total_processing_time_ms: int | None = None
+    agent_reasoning: dict[str, Any] | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
