@@ -11,7 +11,7 @@ def test_settings_load():
     from app.config import settings
 
     assert settings.DB_NAME == "ouroboros_application_db"
-    assert settings.DB_PORT == 3306
+    assert settings.DB_PORT == 3311
     assert settings.DB_POOL_NAME == "application_support_pool"
 
 

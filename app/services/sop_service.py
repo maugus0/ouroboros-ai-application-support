@@ -205,6 +205,21 @@ class SOPService:
         word_count = len(final_text.split())
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
+        agent_reasoning = {
+            "approach": f"Generated {word_count}-word Statement of Purpose using {last_model or 'LLM'}",
+            "decision_factors": [
+                f"Model used: {last_model}",
+                f"Fallback provider used: {any_fallback}",
+                f"Quality score: {quality_score:.2f}/1.0",
+                f"Word count: {word_count} (target: {settings.SOP_MIN_WORDS}-{settings.SOP_MAX_WORDS})",
+                f"Processing time: {elapsed_ms}ms",
+            ],
+            "quality_feedback": feedback or [],
+            "quality_score": float(quality_score) if quality_score else None,
+            "confidence": float(quality_score) if quality_score else None,
+            "model": last_model,
+        }
+
         row = {
             "id": sop_id,
             "user_id": request.user_id,
@@ -241,6 +256,7 @@ class SOPService:
             llm_model_used=last_model,
             llm_fallback_used=any_fallback,
             total_processing_time_ms=elapsed_ms,
+            agent_reasoning=agent_reasoning,
             created_at=None,
             updated_at=None,
         )
@@ -274,6 +290,22 @@ class SOPService:
             "suggested_tone": "professional",
         }
         mock_attr = sanitize_dict(dict(request.match_attribution)) if request.match_attribution else {}
+
+        agent_reasoning = {
+            "approach": f"Generated {word_count}-word Statement of Purpose using mock",
+            "decision_factors": [
+                "Model used: mock",
+                "Fallback provider used: False",
+                "Quality score: 0.85/1.0",
+                f"Word count: {word_count} (target: {settings.SOP_MIN_WORDS}-{settings.SOP_MAX_WORDS})",
+                f"Processing time: {elapsed_ms}ms",
+            ],
+            "quality_feedback": ["mock feedback"],
+            "quality_score": 0.85,
+            "confidence": 0.85,
+            "model": "mock",
+        }
+
         row = {
             "id": sop_id,
             "user_id": request.user_id,
@@ -309,6 +341,7 @@ class SOPService:
             llm_model_used="mock",
             llm_fallback_used=False,
             total_processing_time_ms=elapsed_ms,
+            agent_reasoning=agent_reasoning,
             created_at=None,
             updated_at=None,
         )
