@@ -215,8 +215,8 @@ class SOPService:
                 f"Processing time: {elapsed_ms}ms",
             ],
             "quality_feedback": feedback or [],
-            "quality_score": float(quality_score) if quality_score else None,
-            "confidence": float(quality_score) if quality_score else None,
+            "quality_score": float(quality_score) if quality_score is not None else None,
+            "confidence": float(quality_score) if quality_score is not None else None,
             "model": last_model,
         }
 
